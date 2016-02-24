@@ -227,6 +227,11 @@ UI.initConference = function () {
     let id = APP.conference.localId;
     Toolbar.updateRoomUrl(window.location.href);
 
+    let meHTML = APP.translation.generateTranslationHTML("me");
+
+    let email = Settings.getEmail();
+    $("#localNick").html(email || `${id} (${meHTML})`);
+
     // Add myself to the contact list.
     ContactList.addContact(id);
 
