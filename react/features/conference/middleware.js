@@ -1,14 +1,27 @@
 // @flow
 
+import { appNavigate } from '../app';
 import {
     CONFERENCE_JOINED,
-    VIDEO_QUALITY_LEVELS,
-    setReceiveVideoQuality
+    conferenceFailed,
+    KICKED_OUT,
+    setReceiveVideoQuality,
+    VIDEO_QUALITY_LEVELS
 } from '../base/conference';
 import { SET_REDUCED_UI } from '../base/responsive-ui';
 import { MiddlewareRegistry } from '../base/redux';
 import { setFilmstripEnabled } from '../filmstrip';
 import { setToolboxEnabled } from '../toolbox';
+
+/**
+ * FIXME Usually the value from lib-jitsi-meet should be used
+ * ({@link JitsiConferenceEvents.KICKED}), but it contains
+ * a typo and given that this string will be emitted to the consumer of public
+ * mobile API it's probably better to not advertise it as is (until it gets
+ * fixed).
+ * @type {string}
+ */
+const KICKED_OUT_REASON = 'conference.kicked';
 
 MiddlewareRegistry.register(store => next => action => {
     const result = next(action);
@@ -33,6 +46,11 @@ MiddlewareRegistry.register(store => next => action => {
                         ? VIDEO_QUALITY_LEVELS.LOW
                         : VIDEO_QUALITY_LEVELS.HIGH));
 
+        break;
+    }
+    case KICKED_OUT: {
+        store.dispatch(conferenceFailed(action.conference, KICKED_OUT_REASON));
+        store.dispatch(appNavigate(undefined));
         break;
     }
     }
