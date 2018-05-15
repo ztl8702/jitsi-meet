@@ -2,12 +2,10 @@
 
 import { NativeModules } from 'react-native';
 
+import { getAppProp } from '../../app';
 import { Platform } from '../../base/react';
 
-import {
-    ENTER_PICTURE_IN_PICTURE,
-    _SET_EMITTER_SUBSCRIPTIONS
-} from './actionTypes';
+import { ENTER_PICTURE_IN_PICTURE } from './actionTypes';
 
 /**
  * Enters (or rather initiates entering) picture-in-picture.
@@ -21,13 +19,10 @@ import {
  */
 export function enterPictureInPicture() {
     return (dispatch: Dispatch, getState: Function) => {
-        const state = getState();
-        const { app } = state['features/app'];
-        const { conference, joining } = state['features/base/conference'];
-
-        if (app
-                && app.props.pictureInPictureEnabled
-                && (conference || joining)) {
+        // XXX At the time of this writing this action can only be dispatched by
+        // the button which is on the conference view, which means that it's
+        // fine to enter PiP mode.
+        if (getAppProp(getState, 'pictureInPictureEnabled')) {
             const { PictureInPicture } = NativeModules;
             const p
                 = Platform.OS === 'android'
@@ -41,24 +36,5 @@ export function enterPictureInPicture() {
                 () => dispatch({ type: ENTER_PICTURE_IN_PICTURE }),
                 e => console.warn(`Error entering PiP mode: ${e}`));
         }
-    };
-}
-
-/**
- * Sets the {@code EventEmitter} subscriptions utilized by the feature
- * picture-in-picture.
- *
- * @param {Array<Object>} emitterSubscriptions - The {@code EventEmitter}
- * subscriptions to be set.
- * @protected
- * @returns {{
- *     type: _SET_EMITTER_SUBSCRIPTIONS,
- *     emitterSubscriptions: Array<Object>
- * }}
- */
-export function _setEmitterSubscriptions(emitterSubscriptions: ?Array<Object>) {
-    return {
-        type: _SET_EMITTER_SUBSCRIPTIONS,
-        emitterSubscriptions
     };
 }

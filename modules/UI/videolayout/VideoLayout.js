@@ -66,9 +66,6 @@ const VideoLayout = {
     init(emitter) {
         eventEmitter = emitter;
 
-        // Unregister listeners in case of reinitialization
-        this.unregisterListeners();
-
         localVideoThumbnail = new LocalVideo(VideoLayout, emitter);
 
         // sets default video type of local video
@@ -77,7 +74,7 @@ const VideoLayout = {
 
         // if we do not resize the thumbs here, if there is no video device
         // the local video thumb maybe one pixel
-        this.resizeThumbnails(false, true);
+        this.resizeThumbnails(true);
 
         this.handleVideoThumbClicked = this.handleVideoThumbClicked.bind(this);
 
@@ -104,20 +101,6 @@ const VideoLayout = {
     registerListeners() {
         eventEmitter.addListener(UIEvents.LOCAL_FLIPX_CHANGED,
             onLocalFlipXChanged);
-        eventEmitter.addListener(UIEvents.CONTACT_CLICKED,
-            this.handleVideoThumbClicked);
-    },
-
-    /**
-     * Unregistering listeners for UI events in Video layout component.
-     *
-     * @returns {void}
-     */
-    unregisterListeners() {
-        if (this._onContactClicked) {
-            eventEmitter.removeListener(UIEvents.CONTACT_CLICKED,
-                this.handleVideoThumbClicked);
-        }
     },
 
     initLargeVideo() {
@@ -485,7 +468,7 @@ const VideoLayout = {
             remoteVideo.setVideoType(VIDEO_CONTAINER_TYPE);
         }
 
-        VideoLayout.resizeThumbnails(false, true);
+        VideoLayout.resizeThumbnails(true);
 
         // Initialize the view
         remoteVideo.updateView();
@@ -497,7 +480,7 @@ const VideoLayout = {
         logger.info(`${resourceJid} video is now active`, videoElement);
 
         VideoLayout.resizeThumbnails(
-            false, false, () => {
+            false, () => {
                 if (videoElement) {
                     $(videoElement).show();
                 }
@@ -592,19 +575,16 @@ const VideoLayout = {
      * Resizes thumbnails.
      */
     resizeThumbnails(
-            animate = false,
             forceUpdate = false,
             onComplete = null) {
         const { localVideo, remoteVideo }
             = Filmstrip.calculateThumbnailSize();
 
-        Filmstrip.resizeThumbnails(localVideo, remoteVideo,
-            animate, forceUpdate)
-            .then(() => {
-                if (onComplete && typeof onComplete === 'function') {
-                    onComplete();
-                }
-            });
+        Filmstrip.resizeThumbnails(localVideo, remoteVideo, forceUpdate);
+
+        if (onComplete && typeof onComplete === 'function') {
+            onComplete();
+        }
 
         return { localVideo,
             remoteVideo };
@@ -896,7 +876,7 @@ const VideoLayout = {
         }
 
         // Resize the thumbnails first.
-        this.resizeThumbnails(false, forceUpdate);
+        this.resizeThumbnails(forceUpdate);
 
         // Resize the video area element.
         $('#videospace').animate({
@@ -1112,7 +1092,7 @@ const VideoLayout = {
      * Currently used by tests (torture).
      */
     getLargeVideoID() {
-        return largeVideo.id;
+        return largeVideo && largeVideo.id;
     },
 
     /**

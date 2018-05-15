@@ -1,36 +1,43 @@
 // @flow
-import {
-    NEW_CALENDAR_ENTRY_LIST,
-    NEW_KNOWN_DOMAIN,
-    REFRESH_CALENDAR_ENTRY_LIST
-} from './actionTypes';
 
-/**
- * Sends an action to add a new known domain if not present yet.
- *
- * @param {string} domainName - The new domain.
- * @returns {{
- *   type: NEW_KNOWN_DOMAIN,
- *   domainName: string
- * }}
- */
-export function maybeAddNewKnownDomain(domainName: string) {
-    return {
-        type: NEW_KNOWN_DOMAIN,
-        domainName
-    };
-}
+import {
+    SET_CALENDAR_AUTHORIZATION,
+    SET_CALENDAR_EVENTS,
+    REFRESH_CALENDAR
+} from './actionTypes';
 
 /**
  * Sends an action to refresh the entry list (fetches new data).
  *
+ * @param {boolean|undefined} forcePermission - Whether to force to re-ask for
+ * the permission or not.
  * @returns {{
- *   type: REFRESH_CALENDAR_ENTRY_LIST
+ *     type: REFRESH_CALENDAR,
+ *     forcePermission: boolean
  * }}
  */
-export function refreshCalendarEntryList() {
+export function refreshCalendar(forcePermission: boolean = false) {
     return {
-        type: REFRESH_CALENDAR_ENTRY_LIST
+        type: REFRESH_CALENDAR,
+        forcePermission
+    };
+}
+
+/**
+ * Sends an action to signal that a calendar access has been requested. For more
+ * info, see {@link SET_CALENDAR_AUTHORIZATION}.
+ *
+ * @param {string | undefined} authorization - The result of the last calendar
+ * authorization request.
+ * @returns {{
+ *     type: SET_CALENDAR_AUTHORIZATION,
+ *     authorization: ?string
+ * }}
+ */
+export function setCalendarAuthorization(authorization: ?string) {
+    return {
+        type: SET_CALENDAR_AUTHORIZATION,
+        authorization
     };
 }
 
@@ -39,13 +46,13 @@ export function refreshCalendarEntryList() {
  *
  * @param {Array<Object>} events - The new list.
  * @returns {{
- *   type: NEW_CALENDAR_ENTRY_LIST,
- *   events: Array<Object>
+ *     type: SET_CALENDAR_EVENTS,
+ *     events: Array<Object>
  * }}
  */
-export function updateCalendarEntryList(events: Array<Object>) {
+export function setCalendarEvents(events: Array<Object>) {
     return {
-        type: NEW_CALENDAR_ENTRY_LIST,
+        type: SET_CALENDAR_EVENTS,
         events
     };
 }

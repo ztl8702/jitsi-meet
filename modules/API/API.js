@@ -1,11 +1,12 @@
 // @flow
 
 import * as JitsiMeetConferenceEvents from '../../ConferenceEvents';
-import { parseJWTFromURLParams } from '../../react/features/base/jwt';
 import {
     createApiEvent,
     sendAnalytics
 } from '../../react/features/analytics';
+import { parseJWTFromURLParams } from '../../react/features/base/jwt';
+import { invite } from '../../react/features/invite';
 import { getJitsiMeetTransport } from '../transport';
 
 import { API_ID } from './constants';
@@ -81,10 +82,6 @@ function initCommands() {
             sendAnalytics(createApiEvent('chat.toggled'));
             APP.UI.toggleChat();
         },
-        'toggle-contact-list': () => {
-            sendAnalytics(createApiEvent('contact.list.toggled'));
-            APP.UI.toggleContactList();
-        },
         'toggle-share-screen': () => {
             sendAnalytics(createApiEvent('screen.sharing.toggled'));
             toggleScreenSharing();
@@ -111,8 +108,29 @@ function initCommands() {
 
         return false;
     });
-    transport.on('request', ({ name }, callback) => {
+    transport.on('request', (request, callback) => {
+        const { name } = request;
+
         switch (name) {
+        case 'invite':
+            APP.store.dispatch(
+                invite(request.invitees))
+                .then(failedInvitees => {
+                    let error;
+                    let result;
+
+                    if (failedInvitees.length) {
+                        error = new Error('One or more invites failed!');
+                    } else {
+                        result = true;
+                    }
+
+                    callback({
+                        error,
+                        result
+                    });
+                });
+            break;
         case 'is-audio-muted':
             callback(APP.conference.isLocalAudioMuted());
             break;

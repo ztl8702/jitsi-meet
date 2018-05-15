@@ -1,28 +1,21 @@
 // @flow
+
 import React, { Component } from 'react';
-import {
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { connect } from 'react-redux';
 
 import { appNavigate } from '../../app';
-import { getURLWithoutParams } from '../../base/connection';
-import { getLocalizedDateFormatter, translate } from '../../base/i18n';
+import { getURLWithoutParamsNormalized } from '../../base/connection';
 import { Icon } from '../../base/font-icons';
+import { getLocalizedDateFormatter, translate } from '../../base/i18n';
 import { ASPECT_RATIO_NARROW } from '../../base/responsive-ui';
 
+import { CALENDAR_ENABLED } from '../constants';
 import styles from './styles';
 
 const ALERT_MILLISECONDS = 5 * 60 * 1000;
 
 type Props = {
-
-    /**
-     * The Redux dispatch function.
-     */
-    dispatch: Function,
 
     /**
      * The current aspect ratio of the screen.
@@ -40,6 +33,11 @@ type Props = {
     _eventList: Array<Object>,
 
     /**
+     * The Redux dispatch function.
+     */
+    dispatch: Function,
+
+    /**
      * The translate function.
      */
     t: Function
@@ -54,8 +52,8 @@ type State = {
 };
 
 /**
- * Component to display a permanent badge-like notification on the
- * conference screen when another meeting is about to start.
+ * Component to display a permanent badge-like notification on the conference
+ * screen when another meeting is about to start.
  */
 class ConferenceNotification extends Component<Props, State> {
     updateIntervalId: number;
@@ -103,7 +101,7 @@ class ConferenceNotification extends Component<Props, State> {
     }
 
     /**
-     * Implements the React Components's render method.
+     * Implements the React Components's render.
      *
      * @inheritdoc
      */
@@ -223,12 +221,14 @@ class ConferenceNotification extends Component<Props, State> {
             const now = Date.now();
 
             for (const event of _eventList) {
-                if (event.url !== _currentConferenceURL) {
+                const eventUrl
+                    = getURLWithoutParamsNormalized(new URL(event.url));
+
+                if (eventUrl !== _currentConferenceURL) {
                     if ((!eventToShow
-                        && event.startDate > now
-                        && event.startDate < now + ALERT_MILLISECONDS)
-                        || (event.startDate < now && event.endDate > now)
-                    ) {
+                                && event.startDate > now
+                                && event.startDate < now + ALERT_MILLISECONDS)
+                            || (event.startDate < now && event.endDate > now)) {
                         eventToShow = event;
                     }
                 }
@@ -245,8 +245,8 @@ class ConferenceNotification extends Component<Props, State> {
     /**
      * Opens the meeting URL that the notification shows.
      *
-     * @private
      * @param {string} url - The URL to open.
+     * @private
      * @returns {void}
      */
     _onGoToNext() {
@@ -256,7 +256,6 @@ class ConferenceNotification extends Component<Props, State> {
             this.props.dispatch(appNavigate(event.url));
         }
     }
-
 }
 
 /**
@@ -264,20 +263,22 @@ class ConferenceNotification extends Component<Props, State> {
  *
  * @param {Object} state - The redux state.
  * @returns {{
- *      _aspectRatio: Symbol,
- *      _currentConferenceURL: string,
- *      _eventList: Array
+ *     _aspectRatio: Symbol,
+ *     _currentConferenceURL: string,
+ *     _eventList: Array
  * }}
  */
-export function _mapStateToProps(state: Object) {
+function _mapStateToProps(state: Object) {
     const { locationURL } = state['features/base/connection'];
 
     return {
         _aspectRatio: state['features/base/responsive-ui'].aspectRatio,
         _currentConferenceURL:
-            locationURL ? getURLWithoutParams(locationURL)._url : '',
+            locationURL ? getURLWithoutParamsNormalized(locationURL) : '',
         _eventList: state['features/calendar-sync'].events
     };
 }
 
-export default translate(connect(_mapStateToProps)(ConferenceNotification));
+export default CALENDAR_ENABLED
+    ? translate(connect(_mapStateToProps)(ConferenceNotification))
+    : undefined;

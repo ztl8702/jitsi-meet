@@ -3,7 +3,6 @@ import {
     Animated,
     Keyboard,
     SafeAreaView,
-    Switch,
     TextInput,
     TouchableHighlight,
     TouchableOpacity,
@@ -14,8 +13,7 @@ import { connect } from 'react-redux';
 import { translate } from '../../base/i18n';
 import { Icon } from '../../base/font-icons';
 import { MEDIA_TYPE } from '../../base/media';
-import { updateProfile } from '../../base/profile';
-import { LoadingIndicator, Header, Text } from '../../base/react';
+import { Header, LoadingIndicator, Text } from '../../base/react';
 import { ColorPalette } from '../../base/styles';
 import {
     createDesiredLocalTracks,
@@ -26,12 +24,9 @@ import { SettingsView } from '../../settings';
 import { AbstractWelcomePage, _mapStateToProps } from './AbstractWelcomePage';
 import { setSideBarVisible } from '../actions';
 import LocalVideoTrackUnderlay from './LocalVideoTrackUnderlay';
-import PagedList from './PagedList';
-import styles, {
-    PLACEHOLDER_TEXT_COLOR,
-    SWITCH_THUMB_COLOR,
-    SWITCH_UNDER_COLOR
-} from './styles';
+import styles, { PLACEHOLDER_TEXT_COLOR } from './styles';
+import VideoSwitch from './VideoSwitch';
+import WelcomePageLists from './WelcomePageLists';
 import WelcomePageSideBar from './WelcomePageSideBar';
 
 /**
@@ -48,13 +43,13 @@ class WelcomePage extends AbstractWelcomePage {
     constructor(props) {
         super(props);
 
+        this.state._fieldFocused = false;
         this.state.hintBoxAnimation = new Animated.Value(0);
 
         // Bind event handlers so they are only bound once per instance.
         this._getHintBoxStyle = this._getHintBoxStyle.bind(this);
         this._onFieldFocusChange = this._onFieldFocusChange.bind(this);
         this._onShowSideBar = this._onShowSideBar.bind(this);
-        this._onStartAudioOnlyChange = this._onStartAudioOnlyChange.bind(this);
         this._renderHintBox = this._renderHintBox.bind(this);
     }
 
@@ -71,7 +66,7 @@ class WelcomePage extends AbstractWelcomePage {
 
         const { dispatch } = this.props;
 
-        if (this.props._profile.startAudioOnly) {
+        if (this.props._settings.startAudioOnly) {
             dispatch(destroyLocalTracks());
         } else {
             dispatch(createDesiredLocalTracks(MEDIA_TYPE.VIDEO));
@@ -86,8 +81,8 @@ class WelcomePage extends AbstractWelcomePage {
      * @returns {ReactElement}
      */
     render() {
-        const { buttonStyle, pageStyle, textStyle } = Header;
-        const { t, _profile } = this.props;
+        const { buttonStyle, pageStyle } = Header;
+        const { t } = this.props;
 
         return (
             <LocalVideoTrackUnderlay style = { styles.welcomePage }>
@@ -98,20 +93,7 @@ class WelcomePage extends AbstractWelcomePage {
                                 name = 'menu'
                                 style = { buttonStyle } />
                         </TouchableOpacity>
-                        <View style = { styles.audioVideoSwitchContainer }>
-                            <Text style = { textStyle } >
-                                { t('welcomepage.audioVideoSwitch.video') }
-                            </Text>
-                            <Switch
-                                onTintColor = { SWITCH_UNDER_COLOR }
-                                onValueChange = { this._onStartAudioOnlyChange }
-                                style = { styles.audioVideoSwitch }
-                                thumbTintColor = { SWITCH_THUMB_COLOR }
-                                value = { _profile.startAudioOnly } />
-                            <Text style = { textStyle } >
-                                { t('welcomepage.audioVideoSwitch.audio') }
-                            </Text>
-                        </View>
+                        <VideoSwitch />
                     </Header>
                     <SafeAreaView style = { styles.roomContainer } >
                         <View style = { styles.joinControls } >
@@ -138,7 +120,7 @@ class WelcomePage extends AbstractWelcomePage {
                             }
                         </View>
                     </SafeAreaView>
-                    <PagedList disabled = { this.state._fieldFocused } />
+                    <WelcomePageLists disabled = { this.state._fieldFocused } />
                     <SettingsView />
                 </View>
                 <WelcomePageSideBar />
@@ -171,22 +153,23 @@ class WelcomePage extends AbstractWelcomePage {
      */
     _onFieldFocusChange(focused) {
         return () => {
-            if (focused) {
-                this.setState({
+            focused
+                && this.setState({
                     _fieldFocused: true
                 });
-            }
 
-            Animated.timing(this.state.hintBoxAnimation, {
-                duration: 300,
-                toValue: focused ? 1 : 0
-            }).start(animationState => {
-                if (animationState.finished && !focused) {
-                    this.setState({
-                        _fieldFocused: false
-                    });
-                }
-            });
+            Animated.timing(
+                this.state.hintBoxAnimation,
+                {
+                    duration: 300,
+                    toValue: focused ? 1 : 0
+                })
+                .start(animationState =>
+                    animationState.finished
+                        && !focused
+                        && this.setState({
+                            _fieldFocused: false
+                        }));
         };
     }
 
@@ -202,22 +185,6 @@ class WelcomePage extends AbstractWelcomePage {
     }
 
     /**
-     * Handles the audio-video switch changes.
-     *
-     * @private
-     * @param {boolean} startAudioOnly - The new startAudioOnly value.
-     * @returns {void}
-     */
-    _onStartAudioOnlyChange(startAudioOnly) {
-        const { dispatch } = this.props;
-
-        dispatch(updateProfile({
-            ...this.props._profile,
-            startAudioOnly
-        }));
-    }
-
-    /**
      * Renders the hint box if necessary.
      *
      * @private
@@ -230,7 +197,7 @@ class WelcomePage extends AbstractWelcomePage {
             return (
                 <Animated.View style = { this._getHintBoxStyle() }>
                     <View style = { styles.hintTextContainer } >
-                        <Text>
+                        <Text style = { styles.hintText }>
                             { t('welcomepage.roomnameHint') }
                         </Text>
                     </View>
@@ -288,9 +255,7 @@ class WelcomePage extends AbstractWelcomePage {
                     buttonDisabled ? styles.buttonDisabled : null
                 ] }
                 underlayColor = { ColorPalette.white }>
-                {
-                    children
-                }
+                { children }
             </TouchableHighlight>
         );
     }

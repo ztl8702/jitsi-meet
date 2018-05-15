@@ -1,13 +1,15 @@
-import {
-    BoxModel,
-    ColorPalette,
-    createStyleSheet
-} from '../../base/styles';
+// @flow
+
+import { BoxModel, ColorPalette, createStyleSheet } from '../../base/styles';
+
+export const PLACEHOLDER_TEXT_COLOR = 'rgba(255, 255, 255, 0.3)';
+
+export const SIDEBAR_AVATAR_SIZE = 100;
 
 const SIDEBAR_HEADER_HEIGHT = 150;
 
-export const PLACEHOLDER_TEXT_COLOR = 'rgba(255, 255, 255, 0.3)';
 export const SWITCH_THUMB_COLOR = ColorPalette.blueHighlight;
+
 export const SWITCH_UNDER_COLOR = 'rgba(0, 0, 0, 0.4)';
 
 /**
@@ -40,10 +42,7 @@ export default createStyleSheet({
      */
     avatar: {
         alignSelf: 'center',
-        borderRadius: 50,
-        flex: 0,
-        height: 100,
-        width: 100
+        flex: 0
     },
 
     /**
@@ -82,7 +81,7 @@ export default createStyleSheet({
     displayName: {
         color: ColorPalette.white,
         fontSize: 16,
-        margin: BoxModel.margin,
+        marginTop: BoxModel.margin,
         textAlign: 'center'
     },
 
@@ -114,6 +113,13 @@ export default createStyleSheet({
         overflow: 'hidden',
         paddingHorizontal: BoxModel.padding,
         paddingVertical: 2 * BoxModel.padding
+    },
+
+    /**
+     * The text of the hint box.
+     */
+    hintText: {
+        textAlign: 'center'
     },
 
     /**
@@ -156,53 +162,6 @@ export default createStyleSheet({
         flexDirection: 'column'
     },
 
-    pageIndicator: {
-        alignItems: 'center',
-        flex: 1,
-        flexDirection: 'column',
-        justifyContent: 'center'
-    },
-
-    pageIndicatorContainer: {
-        alignItems: 'stretch',
-        backgroundColor: ColorPalette.blue,
-        flexDirection: 'row',
-        height: 56,
-        justifyContent: 'center'
-    },
-
-    pageIndicatorIcon: {
-        color: ColorPalette.blueHighlight,
-        fontSize: 24
-    },
-
-    pageIndicatorText: {
-        color: ColorPalette.blueHighlight
-    },
-
-    pageIndicatorTextActive: {
-        color: ColorPalette.white
-    },
-
-    /**
-     * Top level style of the paged list.
-     */
-    pagedList: {
-        flex: 1
-    },
-
-    pagedListContainer: {
-        flex: 1,
-        flexDirection: 'column'
-    },
-
-    /**
-     * Disabled style for the container.
-     */
-    pagedListContainerDisabled: {
-        opacity: 0.2
-    },
-
     /**
      * Container for room name input box and 'join' button.
      */
@@ -223,9 +182,11 @@ export default createStyleSheet({
      * The style of the side bar header.
      */
     sideBarHeader: {
+        alignItems: 'center',
         flexDirection: 'column',
         height: SIDEBAR_HEADER_HEIGHT,
-        justifyContent: 'center'
+        justifyContent: 'center',
+        padding: BoxModel.padding
     },
 
     /**

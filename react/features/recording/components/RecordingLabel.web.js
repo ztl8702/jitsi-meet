@@ -3,6 +3,9 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
 import { translate } from '../../base/i18n';
+import { JitsiRecordingStatus } from '../../base/lib-jitsi-meet';
+
+import { RECORDING_TYPES } from '../constants';
 
 /**
  * Implements a React {@link Component} which displays the current state of
@@ -26,6 +29,11 @@ class RecordingLabel extends Component {
         _filmstripVisible: PropTypes.bool,
 
         /**
+         * Whether or not the conference is currently being recorded.
+         */
+        _isRecording: PropTypes.bool,
+
+        /**
          * An object to describe the {@code RecordingLabel} content. If no
          * translation key to display is specified, the label will apply CSS to
          * itself so it can be made invisible.
@@ -36,6 +44,12 @@ class RecordingLabel extends Component {
          * }}
          */
         _labelDisplayConfiguration: PropTypes.object,
+
+        /**
+         * Whether the recording feature is live streaming (jibri) or is file
+         * recording (jirecon).
+         */
+        _recordingType: PropTypes.string,
 
         /**
          * Invoked to obtain translated string.
@@ -87,12 +101,17 @@ class RecordingLabel extends Component {
      * @returns {ReactElement}
      */
     render() {
-        const { _labelDisplayConfiguration } = this.props;
+        const {
+            _isRecording,
+            _labelDisplayConfiguration,
+            _recordingType
+        } = this.props;
         const { centered, key, showSpinner } = _labelDisplayConfiguration || {};
 
         const isVisible = Boolean(key);
         const rootClassName = [
             'video-state-indicator centeredVideoLabel',
+            _isRecording ? 'is-recording' : '',
             isVisible ? 'show-inline' : '',
             centered ? '' : 'moveToCorner',
             this.state.filmstripBecomingVisible ? 'opening' : '',
@@ -101,19 +120,28 @@ class RecordingLabel extends Component {
         ].join(' ');
 
         return (
-            <span
+            <div
                 className = { rootClassName }
                 id = 'recordingLabel'>
-                <span id = 'recordingLabelText'>
-                    { this.props.t(key) }
-                </span>
-                { showSpinner
-                    ? <img
+                { _isRecording
+                    ? <div className = 'recording-icon'>
+                        <div className = 'recording-icon-background' />
+                        <i
+                            className = {
+                                _recordingType === RECORDING_TYPES.JIBRI
+                                    ? 'icon-live'
+                                    : 'icon-rec' } />
+                    </div>
+                    : <div id = 'recordingLabelText'>
+                        { this.props.t(key) }
+                    </div> }
+                { !_isRecording
+                    && showSpinner
+                    && <img
                         className = 'recordingSpinner'
                         id = 'recordingSpinner'
-                        src = 'images/spin.svg' />
-                    : null }
-            </span>
+                        src = 'images/spin.svg' /> }
+            </div>
         );
     }
 }
@@ -126,28 +154,24 @@ class RecordingLabel extends Component {
  * @private
  * @returns {{
  *     _filmstripVisible: boolean,
- *     _labelDisplayConfiguration: Object
+ *     _isRecording: boolean,
+ *     _labelDisplayConfiguration: Object,
+ *     _recordingType: string
  * }}
  */
 function _mapStateToProps(state) {
     const { visible } = state['features/filmstrip'];
-    const { labelDisplayConfiguration } = state['features/recording'];
+    const {
+        labelDisplayConfiguration,
+        recordingState,
+        recordingType
+    } = state['features/recording'];
 
     return {
-        /**
-         * Whether or not the filmstrip is currently set to be displayed.
-         *
-         * @type {boolean}
-         */
         _filmstripVisible: visible,
-
-        /**
-         * An object describing how {@code RecordingLabel} should display its
-         * contents.
-         *
-         * @type {Object}
-         */
-        _labelDisplayConfiguration: labelDisplayConfiguration
+        _isRecording: recordingState === JitsiRecordingStatus.ON,
+        _labelDisplayConfiguration: labelDisplayConfiguration,
+        _recordingType: recordingType
     };
 }
 

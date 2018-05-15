@@ -8,11 +8,7 @@ import { compose, createStore } from 'redux';
 import Thunk from 'redux-thunk';
 
 import { i18next } from '../../base/i18n';
-import {
-    localParticipantJoined,
-    localParticipantLeft
-} from '../../base/participants';
-import '../../base/profile';
+import { localParticipantLeft } from '../../base/participants';
 import { Fragment, RouteRegistry } from '../../base/react';
 import { MiddlewareRegistry, ReducerRegistry } from '../../base/redux';
 import { SoundCollection } from '../../base/sounds';
@@ -26,6 +22,9 @@ import { appNavigate, appWillMount, appWillUnmount } from '../actions';
 /**
  * The default URL to open if no other was specified to {@code AbstractApp}
  * via props.
+ *
+ * FIXME: This is not at the best place here. This should be either in the
+ * base/settings feature or a default in base/config.
  */
 const DEFAULT_URL = 'https://meet.jit.si';
 
@@ -124,35 +123,9 @@ export class AbstractApp extends Component {
      */
     componentWillMount() {
         this._init.then(() => {
-            const { dispatch, getState } = this._getStore();
+            const { dispatch } = this._getStore();
 
             dispatch(appWillMount(this));
-
-            // FIXME I believe it makes more sense for a middleware to dispatch
-            // localParticipantJoined on APP_WILL_MOUNT because the order of
-            // actions is important, not the call site. Moreover, we've got
-            // localParticipant business logic in the React Component
-            // (i.e. UI) AbstractApp now.
-            let localParticipant = {};
-
-            if (typeof APP === 'object') {
-                localParticipant = {
-                    avatarID: APP.settings.getAvatarId(),
-                    avatarURL: APP.settings.getAvatarUrl(),
-                    email: APP.settings.getEmail(),
-                    name: APP.settings.getDisplayName()
-                };
-            }
-
-            // Profile is the new React compatible settings.
-            const profile = getState()['features/base/profile'];
-
-            if (profile) {
-                localParticipant.email
-                    = profile.email || localParticipant.email;
-                localParticipant.name
-                    = profile.displayName || localParticipant.name;
-            }
 
             // We set the initialized state here and not in the contructor to
             // make sure that {@code componentWillMount} gets invoked before
@@ -160,8 +133,6 @@ export class AbstractApp extends Component {
             this.setState({
                 appAsyncInitialized: true
             });
-
-            dispatch(localParticipantJoined(localParticipant));
 
             // If a URL was explicitly specified to this React Component,
             // then open it; otherwise, use a default.
@@ -383,8 +354,8 @@ export class AbstractApp extends Component {
 
         return (
             this.props.defaultURL
-                || this._getStore().getState()['features/base/profile']
-                    .serverURL
+                || this._getStore().getState()['features/base/settings']
+                .serverURL
                 || DEFAULT_URL);
     }
 

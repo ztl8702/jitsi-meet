@@ -1,10 +1,13 @@
-/* @flow */
+// @flow
 
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { RTCView } from 'react-native-webrtc';
 
+import { Pressable } from '../../../react';
+
 import styles from './styles';
+import VideoTransform from './VideoTransform';
 
 /**
  * The React Native {@link Component} which is similar to Web's
@@ -19,7 +22,14 @@ export default class Video extends Component<*> {
      */
     static propTypes = {
         mirror: PropTypes.bool,
+
         onPlaying: PropTypes.func,
+
+        /**
+         * Callback to invoke when the {@code Video} is clicked/pressed.
+         */
+        onPress: PropTypes.func,
+
         stream: PropTypes.object,
 
         /**
@@ -45,7 +55,12 @@ export default class Video extends Component<*> {
          * values: 0 for the remote video(s) which appear in the background, and
          * 1 for the local video(s) which appear above the remote video(s).
          */
-        zOrder: PropTypes.number
+        zOrder: PropTypes.number,
+
+        /**
+         * Indicates whether zooming (pinch to zoom and/or drag) is enabled.
+         */
+        zoomEnabled: PropTypes.bool
     };
 
     /**
@@ -68,28 +83,49 @@ export default class Video extends Component<*> {
      * @returns {ReactElement|null}
      */
     render() {
-        const { stream } = this.props;
+        const { onPress, stream, zoomEnabled } = this.props;
 
         if (stream) {
-            const streamURL = stream.toURL();
-
-            // XXX The CSS style object-fit that we utilize on Web is not
-            // supported on React Native. Adding objectFit to React Native's
-            // StyleSheet appears to be impossible without hacking and an
-            // unjustified amount of effort. Consequently, I've chosen to define
-            // objectFit on RTCView itself. Anyway, prepare to accommodate a
-            // future definition of objectFit in React Native's StyleSheet.
+            // RTCView
             const style = styles.video;
-            const objectFit = (style && style.objectFit) || 'cover';
+            const objectFit
+                = zoomEnabled
+                    ? 'contain'
+                    : (style && style.objectFit) || 'cover';
+            const rtcView
+                = ( // eslint-disable-line no-extra-parens
+                    <RTCView
+                        mirror = { this.props.mirror }
+                        objectFit = { objectFit }
+                        streamURL = { stream.toURL() }
+                        style = { style }
+                        zOrder = { this.props.zOrder } />
+                );
 
-            // eslint-disable-next-line no-extra-parens
+            // VideoTransform implements "pinch to zoom". As part of "pinch to
+            // zoom", it implements onPress, of course.
+            if (zoomEnabled) {
+                return (
+                    <VideoTransform
+                        enabled = { zoomEnabled }
+                        onPress = { onPress }
+                        streamId = { stream.id }
+                        style = { style }>
+                        { rtcView }
+                    </VideoTransform>
+                );
+            }
+
+            // XXX Unfortunately, VideoTransform implements a custom press
+            // detection which has been observed to be very picky about the
+            // precision of the press unlike the builtin/default/standard press
+            // detection which is forgiving to imperceptible movements while
+            // pressing. It's not acceptable to be so picky, especially when
+            // "pinch to zoom" is not enabled.
             return (
-                <RTCView
-                    mirror = { this.props.mirror }
-                    objectFit = { objectFit }
-                    streamURL = { streamURL }
-                    style = { style }
-                    zOrder = { this.props.zOrder } />
+                <Pressable onPress = { onPress }>
+                    { rtcView }
+                </Pressable>
             );
         }
 

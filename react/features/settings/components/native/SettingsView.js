@@ -120,7 +120,7 @@ class SettingsView extends AbstractSettingsView {
      * @returns {void}
      */
     _processServerURL(hideOnSuccess: boolean) {
-        const { serverURL } = this.props._profile;
+        const { serverURL } = this.props._settings;
         const normalizedURL = normalizeUserInputURL(serverURL);
 
         if (normalizedURL === null) {
@@ -140,7 +140,7 @@ class SettingsView extends AbstractSettingsView {
      * @returns {React$Element}
      */
     _renderBody() {
-        const { _profile } = this.props;
+        const { _settings } = this.props;
 
         return (
             <SafeAreaView style = { styles.settingsForm }>
@@ -151,16 +151,19 @@ class SettingsView extends AbstractSettingsView {
                         fieldSeparator = { true }
                         i18nLabel = 'settingsView.displayName'>
                         <TextInput
+                            autoCorrect = { false }
                             onChangeText = { this._onChangeDisplayName }
                             placeholder = 'John Doe'
-                            value = { _profile.displayName } />
+                            value = { _settings.displayName } />
                     </FormRow>
                     <FormRow i18nLabel = 'settingsView.email'>
                         <TextInput
+                            autoCapitalize = 'none'
+                            autoCorrect = { false }
                             keyboardType = { 'email-address' }
                             onChangeText = { this._onChangeEmail }
                             placeholder = 'email@example.com'
-                            value = { _profile.email } />
+                            value = { _settings.email } />
                     </FormRow>
                     <FormSectionHeader
                         i18nLabel = 'settingsView.conferenceSection' />
@@ -169,22 +172,23 @@ class SettingsView extends AbstractSettingsView {
                         i18nLabel = 'settingsView.serverURL'>
                         <TextInput
                             autoCapitalize = 'none'
+                            autoCorrect = { false }
                             onBlur = { this._onBlurServerURL }
                             onChangeText = { this._onChangeServerURL }
                             placeholder = { this.props._serverURL }
-                            value = { _profile.serverURL } />
+                            value = { _settings.serverURL } />
                     </FormRow>
                     <FormRow
                         fieldSeparator = { true }
                         i18nLabel = 'settingsView.startWithAudioMuted'>
                         <Switch
                             onValueChange = { this._onStartAudioMutedChange }
-                            value = { _profile.startWithAudioMuted } />
+                            value = { _settings.startWithAudioMuted } />
                     </FormRow>
                     <FormRow i18nLabel = 'settingsView.startWithVideoMuted'>
                         <Switch
                             onValueChange = { this._onStartVideoMutedChange }
-                            value = { _profile.startWithVideoMuted } />
+                            value = { _settings.startWithVideoMuted } />
                     </FormRow>
                 </ScrollView>
             </SafeAreaView>

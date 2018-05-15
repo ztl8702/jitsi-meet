@@ -7,11 +7,13 @@ import {
     CAMERA_FACING_MODE,
     MEDIA_TYPE,
     setAudioMuted,
-    setVideoMuted
+    setVideoMuted,
+    VIDEO_MUTISM_AUTHORITY
 } from '../media';
 import { getLocalParticipant } from '../participants';
 
 import {
+    TOGGLE_SCREENSHARING,
     TRACK_ADDED,
     TRACK_CREATE_CANCELED,
     TRACK_CREATE_ERROR,
@@ -19,7 +21,7 @@ import {
     TRACK_UPDATED,
     TRACK_WILL_CREATE
 } from './actionTypes';
-import { createLocalTracksF } from './functions';
+import { createLocalTracksF, getLocalTrack, getLocalTracks } from './functions';
 
 const logger = require('jitsi-meet-logger').getLogger(__filename);
 
@@ -40,12 +42,25 @@ export function createDesiredLocalTracks(...desiredTypes) {
             const { audio, video } = state['features/base/media'];
 
             audio.muted || desiredTypes.push(MEDIA_TYPE.AUDIO);
-            video.muted || desiredTypes.push(MEDIA_TYPE.VIDEO);
+
+            // XXX When the app is coming into the foreground from the
+            // background in order to handle a URL, it may realize the new
+            // background state soon after it has tried to create the local
+            // tracks requested by the URL. Ignore
+            // VIDEO_MUTISM_AUTHORITY.BACKGROUND and create the local video
+            // track if no other VIDEO_MUTISM_AUTHORITY has muted it. The local
+            // video track will be muted until the app realizes the new
+            // background state.
+
+            // eslint-disable-next-line no-bitwise
+            (video.muted & ~VIDEO_MUTISM_AUTHORITY.BACKGROUND)
+                || desiredTypes.push(MEDIA_TYPE.VIDEO);
         }
 
         const availableTypes
-            = state['features/base/tracks']
-                .filter(t => t.local)
+            = getLocalTracks(
+                    state['features/base/tracks'],
+                    /* includePending */ true)
                 .map(t => t.mediaType);
 
         // We need to create the desired tracks which are not already available.
@@ -84,8 +99,10 @@ export function createLocalTracksA(options = {}) {
         // to implement them) and the right thing to do is to ask for each
         // device separately.
         for (const device of devices) {
-            if (getState()['features/base/tracks']
-                    .find(t => t.local && t.mediaType === device)) {
+            if (getLocalTrack(
+                    getState()['features/base/tracks'],
+                    device,
+                    /* includePending */ true)) {
                 throw new Error(`Local track for ${device} already exists`);
             }
 
@@ -169,6 +186,20 @@ export function destroyLocalTracks() {
                         getState()['features/base/tracks']
                             .filter(t => t.local)
                             .map(t => t.jitsiTrack))));
+    };
+}
+
+/**
+ * Signals that the local participant is ending screensharing or beginning the
+ * screensharing flow.
+ *
+ * @returns {{
+ *     type: TOGGLE_SCREENSHARING,
+ * }}
+ */
+export function toggleScreensharing() {
+    return {
+        type: TOGGLE_SCREENSHARING
     };
 }
 

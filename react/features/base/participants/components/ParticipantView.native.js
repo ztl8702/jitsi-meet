@@ -13,6 +13,7 @@ import {
 } from '../../media';
 import { prefetch } from '../../../mobile/image-cache';
 import { Container, TintedView } from '../../react';
+import { TestHint } from '../../testing/components';
 import { getTrackByMediaTypeAndParticipant } from '../../tracks';
 
 import Avatar from './Avatar';
@@ -71,6 +72,11 @@ type Props = {
     avatarSize: number,
 
     /**
+     * Callback to invoke when the {@code ParticipantView} is clicked/pressed.
+     */
+    onPress: Function,
+
+    /**
      * The ID of the participant (to be) depicted by {@link ParticipantView}.
      *
      * @public
@@ -102,6 +108,14 @@ type Props = {
     t: Function,
 
     /**
+     * The test hint id which can be used to locate the {@code ParticipantView}
+     * on the jitsi-meet-torture side. If not provided, the
+     * {@code participantId} with the following format will be used:
+     * {@code `org.jitsi.meet.Participant#${participantId}`}
+     */
+    testHintId: ?string,
+
+    /**
      * Indicates if the connectivity info label should be shown, if appropriate.
      * It will be shown in case the connection is interrupted.
      */
@@ -112,7 +126,12 @@ type Props = {
      * stacking space of all {@code Video}s. For more details, refer to the
      * {@code zOrder} property of the {@code Video} class for React Native.
      */
-    zOrder: number
+    zOrder: number,
+
+    /**
+     * Indicates whether zooming (pinch to zoom and/or drag) is enabled.
+     */
+    zoomEnabled: boolean
 };
 
 /**
@@ -122,6 +141,7 @@ type Props = {
  * @extends Component
  */
 class ParticipantView extends Component<Props> {
+
     /**
      * Renders the connection status label, if appropriate.
      *
@@ -158,8 +178,10 @@ class ParticipantView extends Component<Props> {
         };
 
         return (
-            <View style = { containerStyle } >
-                <Text style = { styles.connectionInfoText } >
+            <View
+                pointerEvents = 'box-none'
+                style = { containerStyle }>
+                <Text style = { styles.connectionInfoText }>
                     { t(messageKey, { displayName }) }
                 </Text>
             </View>
@@ -174,6 +196,7 @@ class ParticipantView extends Component<Props> {
      */
     render() {
         const {
+            onPress,
             _avatar: avatar,
             _connectionStatus: connectionStatus,
             _videoTrack: videoTrack
@@ -188,47 +211,59 @@ class ParticipantView extends Component<Props> {
         // doesn't retain the last frame forever, so we would end up with a
         // black screen.
         const waitForVideoStarted = false;
-        const renderVideo
+        let renderVideo
             = !this.props._audioOnly
                 && (connectionStatus
                     === JitsiParticipantConnectionStatus.ACTIVE)
                 && shouldRenderVideoTrack(videoTrack, waitForVideoStarted);
 
         // Is the avatar to be rendered?
-        const renderAvatar = Boolean(!renderVideo && avatar);
+        let renderAvatar = Boolean(!renderVideo && avatar);
 
-        // If the connection has problems we will "tint" the video / avatar.
+        // The consumer of this ParticipantView is allowed to forbid showing the
+        // video if the private logic of this ParticipantView determines that
+        // the video could be rendered.
+        renderVideo = renderVideo && _toBoolean(this.props.showVideo, true);
+
+        // The consumer of this ParticipantView is allowed to forbid showing the
+        // avatar if the private logic of this ParticipantView determines that
+        // the avatar could be rendered.
+        renderAvatar = renderAvatar && _toBoolean(this.props.showAvatar, true);
+
+        // If the connection has problems, we will "tint" the video / avatar.
         const useTint
             = connectionStatus === JitsiParticipantConnectionStatus.INACTIVE
                 || connectionStatus
                     === JitsiParticipantConnectionStatus.INTERRUPTED;
 
+        const testHintId
+            = this.props.testHintId
+                ? this.props.testHintId
+                : `org.jitsi.meet.Participant#${this.props.participantId}`;
+
         return (
             <Container
+                onClick = { renderVideo ? undefined : onPress }
                 style = {{
                     ...styles.participantView,
                     ...this.props.style
-                }}>
+                }}
+                touchFeedback = { false }>
+
+                <TestHint
+                    id = { testHintId }
+                    onPress = { onPress }
+                    value = '' />
 
                 { renderVideo
-
-                    // The consumer of this ParticipantView is allowed to forbid
-                    // showing the video if the private logic of this
-                    // ParticipantView determines that the video could be
-                    // rendered.
-                    && _toBoolean(this.props.showVideo, true)
                     && <VideoTrack
+                        onPress = { renderVideo ? onPress : undefined }
                         videoTrack = { videoTrack }
                         waitForVideoStarted = { waitForVideoStarted }
-                        zOrder = { this.props.zOrder } /> }
+                        zOrder = { this.props.zOrder }
+                        zoomEnabled = { this.props.zoomEnabled } /> }
 
                 { renderAvatar
-
-                    // The consumer of this ParticipantView is allowed to forbid
-                    // showing the avatar if the private logic of this
-                    // ParticipantView determines that the avatar could be
-                    // rendered.
-                    && _toBoolean(this.props.showAvatar, true)
                     && <Avatar
                         size = { this.props.avatarSize }
                         uri = { avatar } /> }

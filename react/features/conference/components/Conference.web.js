@@ -8,11 +8,17 @@ import { connect, disconnect } from '../../base/connection';
 import { DialogContainer } from '../../base/dialog';
 import { translate } from '../../base/i18n';
 import { CalleeInfoContainer } from '../../base/jwt';
+import { HideNotificationBarStyle } from '../../base/react';
 import { Filmstrip } from '../../filmstrip';
 import { LargeVideo } from '../../large-video';
 import { NotificationsContainer } from '../../notifications';
-import { showToolbox, Toolbox } from '../../toolbox';
-import { HideNotificationBarStyle } from '../../unsupported-browser';
+import { SidePanel } from '../../side-panel';
+import {
+    Toolbox,
+    fullScreenChanged,
+    setToolboxAlwaysVisible,
+    showToolbox
+} from '../../toolbox';
 
 import { maybeShowSuboptimalExperienceNotification } from '../functions';
 
@@ -20,9 +26,27 @@ declare var APP: Object;
 declare var interfaceConfig: Object;
 
 /**
+ * DOM events for when full screen mode has changed. Different browsers need
+ * different vendor prefixes.
+ *
+ * @private
+ * @type {Array<string>}
+ */
+const FULL_SCREEN_EVENTS = [
+    'webkitfullscreenchange',
+    'mozfullscreenchange',
+    'fullscreenchange'
+];
+
+/**
  * The type of the React {@code Component} props of {@link Conference}.
  */
 type Props = {
+
+    /**
+     * Whether the toolbar should stay visible or be able to autohide.
+     */
+    _alwaysVisibleToolbar: boolean,
 
     /**
      * Whether the local participant is recording the conference.
@@ -37,6 +61,7 @@ type Props = {
  * The conference page of the Web application.
  */
 class Conference extends Component<Props> {
+    _onFullScreenChange: Function;
     _onShowToolbar: Function;
     _originalOnShowToolbar: Function;
 
@@ -59,6 +84,9 @@ class Conference extends Component<Props> {
                 leading: true,
                 trailing: false
             });
+
+        // Bind event handler so it is only bound once for every instance.
+        this._onFullScreenChange = this._onFullScreenChange.bind(this);
     }
 
     /**
@@ -74,10 +102,16 @@ class Conference extends Component<Props> {
         APP.UI.registerListeners();
         APP.UI.bindEvents();
 
-        const { dispatch, t } = this.props;
+        FULL_SCREEN_EVENTS.forEach(name =>
+            document.addEventListener(name, this._onFullScreenChange));
+
+        const { _alwaysVisibleToolbar, dispatch, t } = this.props;
 
         dispatch(connect());
         maybeShowSuboptimalExperienceNotification(dispatch, t);
+
+        dispatch(setToolboxAlwaysVisible(
+            _alwaysVisibleToolbar || interfaceConfig.filmStripOnly));
     }
 
     /**
@@ -90,6 +124,9 @@ class Conference extends Component<Props> {
         APP.UI.unregisterListeners();
         APP.UI.unbindEvents();
 
+        FULL_SCREEN_EVENTS.forEach(name =>
+            document.removeEventListener(name, this._onFullScreenChange));
+
         APP.conference.isJoined() && this.props.dispatch(disconnect());
     }
 
@@ -100,7 +137,10 @@ class Conference extends Component<Props> {
      * @returns {ReactElement}
      */
     render() {
-        const { filmStripOnly, VIDEO_QUALITY_LABEL_DISABLED } = interfaceConfig;
+        const {
+            VIDEO_QUALITY_LABEL_DISABLED,
+            filmStripOnly
+        } = interfaceConfig;
         const hideVideoQualityLabel
             = filmStripOnly
                 || VIDEO_QUALITY_LABEL_DISABLED
@@ -116,7 +156,8 @@ class Conference extends Component<Props> {
                     <Filmstrip filmstripOnly = { filmStripOnly } />
                 </div>
 
-                { filmStripOnly ? null : <Toolbox /> }
+                { !filmStripOnly && <Toolbox /> }
+                { !filmStripOnly && <SidePanel /> }
 
                 <DialogContainer />
                 <NotificationsContainer />
@@ -133,6 +174,17 @@ class Conference extends Component<Props> {
                 <HideNotificationBarStyle />
             </div>
         );
+    }
+
+    /**
+     * Updates the Redux state when full screen mode has been enabled or
+     * disabled.
+     *
+     * @private
+     * @returns {void}
+     */
+    _onFullScreenChange() {
+        this.props.dispatch(fullScreenChanged(APP.UI.isFullScreen()));
     }
 
     /**
@@ -153,17 +205,30 @@ class Conference extends Component<Props> {
  * @param {Object} state - The Redux state.
  * @private
  * @returns {{
+ *     _alwaysVisibleToolbar: boolean,
  *     _iAmRecorder: boolean
  * }}
  */
 function _mapStateToProps(state) {
+    const {
+        alwaysVisibleToolbar,
+        iAmRecorder
+    } = state['features/base/config'];
+
     return {
+        /**
+         * Whether the toolbar should stay visible or be able to autohide.
+         *
+         * @private
+         */
+        _alwaysVisibleToolbar: alwaysVisibleToolbar,
+
         /**
          * Whether the local participant is recording the conference.
          *
          * @private
          */
-        _iAmRecorder: state['features/base/config'].iAmRecorder
+        _iAmRecorder: iAmRecorder
     };
 }
 

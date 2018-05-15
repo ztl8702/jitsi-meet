@@ -1,5 +1,4 @@
 {
-    "contactlist": "__count__ Member",
     "contactlist_plural": "__count__ Members",
     "passwordSetRemotely": "set by another member",
     "poweredby": "powered by",
@@ -23,6 +22,7 @@
       "react-nativeGrantPermissions": "Select <b><i>Allow</i></b> when your browser asks for permissions.",
       "chromeGrantPermissions": "Select <b><i>Allow</i></b> when your browser asks for permissions.",
       "androidGrantPermissions": "Select <b><i>Allow</i></b> when your browser asks for permissions.",
+      "electronGrantPermissions": "Please grant permissions to use your camera and microphone",
       "firefoxGrantPermissions": "Select <b><i>Share Selected Device</i></b> when your browser asks for permissions.",
       "operaGrantPermissions": "Select <b><i>Allow</i></b> when your browser asks for permissions.",
       "iexplorerGrantPermissions": "Select <b><i>OK</i></b> when your browser asks for permissions.",
@@ -55,6 +55,7 @@
         "go": "GO",
         "join": "JOIN",
         "privacy": "Privacy",
+        "recentList": "History",
         "roomname": "Enter room name",
         "roomnameHint": "Enter the name or URL of the room you want to join. You may make a name up, just let the people you are meeting know it so that they enter the same name.",
         "sendFeedback": "Send feedback",
@@ -73,21 +74,27 @@
     "toolbar": {
         "addPeople": "Add people to your call",
         "audioonly": "Enable / Disable audio only mode (saves bandwidth)",
+        "callQuality": "Manage call quality",
+        "enterFullScreen": "View full screen",
+        "exitFullScreen": "Exit full screen",
+        "feedback": "Leave feedback",
+        "moreActions": "More actions",
         "mute": "Mute / Unmute",
         "videomute": "Start / Stop camera",
         "authenticate": "Authenticate",
         "lock": "Lock / Unlock room",
         "chat": "Open / Close chat",
         "etherpad": "Open / Close shared document",
+        "documentOpen": "Open shared document",
+        "documentClose": "Close shared document",
         "sharedvideo": "Share a YouTube video",
-        "sharescreen": "Start / Stop screen sharing",
+        "stopSharedVideo": "Stop YouTube video",
         "fullscreen": "View / Exit full screen",
         "sip": "Call SIP number",
         "Settings": "Settings",
         "hangup": "Leave",
         "login": "Login",
         "logout": "Logout",
-        "dialpad": "Open / Close dialpad",
         "sharedVideoMutedPopup": "Your shared video has been muted so that you can talk to the other members.",
         "micMutedPopup": "Your microphone has been muted so that you would fully enjoy your shared video.",
         "talkWhileMutedPopup": "Trying to speak? You are muted.",
@@ -96,17 +103,10 @@
         "micDisabled": "Microphone is not available",
         "filmstrip": "Show / Hide videos",
         "profile": "Edit your profile",
-        "raiseHand": "Raise / Lower your hand"
-    },
-    "unsupportedBrowser": {
-        "appNotInstalled": "Join this meeting with __app__ on your phone.",
-        "downloadApp": "Download the app",
-        "openApp": "Continue to __app__"
-    },
-    "bottomtoolbar": {
-        "chat": "Open / close chat",
-        "filmstrip": "Show / hide videos",
-        "contactlist": "View and invite members"
+        "raiseHand": "Raise / Lower your hand",
+        "shortcuts": "View shortcuts",
+        "speakerStats": "Speaker stats",
+        "invite": "Invite people"
     },
     "chat":{
         "nickname": {
@@ -285,6 +285,7 @@
         "liveStreaming": "Live Streaming",
         "streamKey": "Live stream key",
         "startLiveStreaming": "Go live now",
+        "startRecording": "Start recording",
         "stopStreamingWarning": "Are you sure you would like to stop the live streaming?",
         "stopRecordingWarning": "Are you sure you would like to stop the recording?",
         "stopLiveStreaming": "Stop live streaming",
@@ -440,15 +441,18 @@
         "noPermission": "Permission not granted",
         "previewUnavailable": "Preview unavailable",
         "selectADevice": "Select a device",
-        "testAudio": "Test sound"
+        "testAudio": "Play a test sound"
     },
     "videoStatus": {
         "callQuality": "Call Quality",
         "hd": "HD",
+        "hdTooltip": "Viewing high definition video",
         "highDefinition": "High definition",
-        "labelTooltipVideo": "Current video quality",
         "labelTooltipAudioOnly":  "Audio-only mode enabled",
+        "labelTooiltipNoVideo": "No video",
+        "labelTooltipVideo": "Current video quality",
         "ld": "LD",
+        "ldTooltip": "Viewing low definition video",
         "lowDefinition": "Low definition",
         "onlyAudioAvailable": "Only audio is available",
         "onlyAudioSupported": "We only support audio in this browser.",
@@ -456,6 +460,7 @@
         "p2pVideoQualityDescription": "In peer to peer mode, received call quality can only be toggled between high and audio only. Other settings will not be honored until peer to peer is exited.",
         "recHighDefinitionOnly": "Will prefer high definition.",
         "sd": "SD",
+        "sdTooltip": "Viewing standard definition video",
         "standardDefinition": "Standard definition",
         "qualityButtonTip": "Change received video quality"
     },
@@ -463,7 +468,7 @@
         "statusMessage": "is now __status__"
     },
     "addPeople": {
-        "add": "Add",
+        "add": "Invite",
         "countryNotSupported": "We do not support this destination yet.",
         "countryReminder": "Calling outside the US? Please make sure you start with the country code!",
         "disabled": "You can't invite people.",
@@ -473,11 +478,12 @@
         "loadingPeople": "Searching for people to invite",
         "noResults": "No matching search results",
         "noValidNumbers": "Please enter a phone number",
-        "searchNumbers": "Enter a phone number to invite",
-        "searchPeople": "Enter a name to invite",
-        "searchPeopleAndNumbers": "Enter a name or phone number to invite",
+        "notAvailable": "You can't invite people.",
+        "searchNumbers": "Add phone numbers",
+        "searchPeople": "Search for people",
+        "searchPeopleAndNumbers": "Search for people or add their phone numbers",
         "telephone": "Telephone: __number__",
-        "title": "Invite people to your meeting",
+        "title": "Invite people to this meeting",
         "failedToAdd": "Failed to add members"
     },
     "inlineDialogFailure": {
@@ -496,31 +502,34 @@
         "average": "Average",
         "bad": "Bad",
         "good": "Good",
-        "rateExperience": "Please rate your meeting experience.",
+        "detailsLabel": "Tell us more about it.",
+        "rateExperience": "Rate your meeting experience",
         "veryBad": "Very Bad",
         "veryGood": "Very Good"
     },
     "info": {
         "addPassword": "Add password",
         "cancelPassword": "Cancel password",
-        "conferenceURL": "Link: __url__",
+        "conferenceURL": "Link:",
         "country": "Country",
         "dialANumber": "To join your meeting, dial one of these numbers and then enter this PIN: __conferenceID__#",
-        "dialInNumber": "Dial-in: __phoneNumber__",
-        "dialInConferenceID": "PIN: __conferenceID__#",
+        "dialInNumber": "Dial-in:",
+        "dialInConferenceID": "PIN:",
         "dialInNotSupported": "Sorry, dialing in is currently not suppported.",
         "genericError": "Whoops, something went wrong.",
+        "inviteLiveStream": "To view the live stream of this meeting, click this link: __url__",
         "invitePhone": "To join by phone, dial __number__ and enter this PIN: __conferenceID__#",
         "invitePhoneAlternatives": "To view more phone numbers, click this link: __url__",
         "inviteURL": "To join the video meeting, click this link: __url__",
+        "liveStreamURL": "Live stream:",
         "moreNumbers": "More numbers",
         "noNumbers": "No dial-in numbers.",
         "noPassword": "None",
         "noRoom": "No room was specified to dial-in into.",
         "numbers": "Dial-in Numbers",
         "password": "Password:",
-        "title": "Call info",
-        "tooltip": "Get access info about the meeting"
+        "title": "Share",
+        "tooltip": "Share link and dial-in info for this meeting"
     },
     "settingsView": {
         "alertOk": "OK",
@@ -539,11 +548,25 @@
         "later": "Later",
         "next": "Upcoming",
         "nextMeeting": "next meeting",
-        "now": "Now"
+        "now": "Now",
+        "permissionButton": "Open settings",
+        "permissionMessage": "Calendar permission is required to list your meetings in the app."
     },
     "recentList": {
         "today": "Today",
         "yesterday": "Yesterday",
         "earlier": "Earlier"
+    },
+    "sectionList": {
+        "pullToRefresh": "Pull to refresh"
+    },
+    "deepLinking": {
+        "title": "Launching your meeting in __app__...",
+        "description": "Nothing happened? We tried launching your meeting in the __app__ desktop app. Try again or launch it in the __app__ web app.",
+        "tryAgainButton": "Try again in desktop",
+        "launchWebButton": "Launch in web",
+        "appNotInstalled": "You need the __app__ mobile app to join this meeting on your phone.",
+        "downloadApp": "Download the app",
+        "openApp": "Continue to the app"
     }
 }

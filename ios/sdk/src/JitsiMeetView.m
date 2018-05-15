@@ -23,6 +23,8 @@
 #import <React/RCTLinkingManager.h>
 #import <React/RCTRootView.h>
 
+#import "Invite+Private.h"
+#import "InviteController+Private.h"
 #import "JitsiMeetView+Private.h"
 #import "RCTBridgeWrapper.h"
 
@@ -272,6 +274,9 @@ static NSMapTable<NSString *, JitsiMeetView *> *views;
     props[@"pictureInPictureEnabled"] = @(self.pictureInPictureEnabled);
     props[@"welcomePageEnabled"] = @(self.welcomePageEnabled);
 
+    props[@"addPeopleEnabled"] = @(_inviteController.addPeopleEnabled);
+    props[@"dialOutEnabled"] = @(_inviteController.dialOutEnabled);
+
     // XXX If urlObject is nil, then it must appear as undefined in the
     // JavaScript source code so that we check the launchOptions there.
     if (urlObject) {
@@ -403,10 +408,13 @@ static NSMapTable<NSString *, JitsiMeetView *> *views;
     });
 
     // Hook this JitsiMeetView into ExternalAPI.
-    if (!externalAPIScope) {
-        externalAPIScope = [NSUUID UUID].UUIDString;
-        [views setObject:self forKey:externalAPIScope];
-    }
+    externalAPIScope = [NSUUID UUID].UUIDString;
+    [views setObject:self forKey:externalAPIScope];
+
+    Invite *inviteModule = [bridgeWrapper.bridge moduleForName:@"Invite"];
+    _inviteController
+        = [[JMInviteController alloc] initWithExternalAPIScope:externalAPIScope
+                                               andInviteModule:inviteModule];
 
     // Set a background color which is in accord with the JavaScript and Android
     // parts of the application and causes less perceived visual flicker than

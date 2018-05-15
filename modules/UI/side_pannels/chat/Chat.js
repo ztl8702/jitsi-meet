@@ -1,7 +1,6 @@
 /* global APP, $ */
 
-import { processReplacements, linkify } from './Replacement';
-import CommandsProcessor from './Commands';
+import { processReplacements } from './Replacement';
 import VideoLayout from '../../videolayout/VideoLayout';
 
 import UIUtil from '../../util/UIUtil';
@@ -9,7 +8,11 @@ import UIEvents from '../../../../service/UI/UIEvents';
 
 import { smileys } from './smileys';
 
-import { dockToolbox, setSubject } from '../../../../react/features/toolbox';
+import { addMessage, markAllRead } from '../../../../react/features/chat';
+import {
+    dockToolbox,
+    getToolboxHeight
+} from '../../../../react/features/toolbox';
 
 let unreadMessages = 0;
 const sidePanelsContainerId = 'sideToolbarContainer';
@@ -163,6 +166,8 @@ function addSmileys() {
  * Resizes the chat conversation.
  */
 function resizeChatConversation() {
+    // FIXME: this function can all be done with CSS. If Chat is ever rewritten,
+    // do not copy over this logic.
     const msgareaHeight = $('#usermsg').outerHeight();
     const chatspace = $(`#${CHAT_CONTAINER_ID}`);
     const width = chatspace.width();
@@ -173,7 +178,12 @@ function resizeChatConversation() {
     $('#smileys').css('bottom', (msgareaHeight - 26) / 2);
     $('#smileysContainer').css('bottom', msgareaHeight);
     chat.width(width - 10);
-    chat.height(window.innerHeight - 15 - msgareaHeight);
+
+    const maybeAMagicNumberForPaddingAndMargin = 100;
+    const offset = maybeAMagicNumberForPaddingAndMargin
+        + msgareaHeight + getToolboxHeight();
+
+    chat.height(window.innerHeight - offset);
 }
 
 /**
@@ -223,15 +233,10 @@ const Chat = {
 
                 usermsg.val('').trigger('autosize.resize');
                 this.focus();// eslint-disable-line no-invalid-this
-                const command = new CommandsProcessor(value, eventEmitter);
 
-                if (command.isCommand()) {
-                    command.processCommand();
-                } else {
-                    const message = UIUtil.escapeHtml(value);
+                const message = UIUtil.escapeHtml(value);
 
-                    eventEmitter.emit(UIEvents.MESSAGE_CREATED, message);
-                }
+                eventEmitter.emit(UIEvents.MESSAGE_CREATED, message);
             }
         });
 
@@ -249,6 +254,7 @@ const Chat = {
                 }
 
                 unreadMessages = 0;
+                APP.store.dispatch(markAllRead());
                 updateVisualNotification();
 
                 // Undock the toolbar when the chat is shown and if we're in a
@@ -274,9 +280,10 @@ const Chat = {
      */
     // eslint-disable-next-line max-params
     updateChatConversation(id, displayName, message, stamp) {
+        const isFromLocalParticipant = APP.conference.isLocalId(id);
         let divClassName = '';
 
-        if (APP.conference.isLocalId(id)) {
+        if (isFromLocalParticipant) {
             divClassName = 'localuser';
         } else {
             divClassName = 'remoteuser';
@@ -294,6 +301,7 @@ const Chat = {
             .replace(/>/g, '&gt;')
 .replace(/\n/g, '<br/>');
         const escDisplayName = UIUtil.escapeHtml(displayName);
+        const timestamp = getCurrentTime(stamp);
 
         // eslint-disable-next-line no-param-reassign
         message = processReplacements(escMessage);
@@ -302,13 +310,18 @@ const Chat = {
             = `${'<div class="chatmessage">'
                 + '<img src="images/chatArrow.svg" class="chatArrow">'
                 + '<div class="username '}${divClassName}">${escDisplayName
-            }</div><div class="timestamp">${getCurrentTime(stamp)
+            }</div><div class="timestamp">${timestamp
             }</div><div class="usermessage">${message}</div>`
             + '</div>';
 
         $('#chatconversation').append(messageContainer);
         $('#chatconversation').animate(
                 { scrollTop: $('#chatconversation')[0].scrollHeight }, 1000);
+
+        const markAsRead = Chat.isVisible() || isFromLocalParticipant;
+
+        APP.store.dispatch(addMessage(
+            escDisplayName, message, timestamp, markAsRead));
     },
 
     /**
@@ -329,21 +342,6 @@ const Chat = {
                 errorMessage ? ` Reason: ${errorMessage}` : ''}</div>`);
         $('#chatconversation').animate(
             { scrollTop: $('#chatconversation')[0].scrollHeight }, 1000);
-    },
-
-    /**
-     * Sets the subject to the UI
-     * @param subject the subject
-     */
-    setSubject(subject) {
-        if (subject) {
-            // eslint-disable-next-line no-param-reassign
-            subject = subject.trim();
-        }
-
-        const html = linkify(UIUtil.escapeHtml(subject));
-
-        APP.store.dispatch(setSubject(html));
     },
 
     /**

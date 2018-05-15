@@ -15,9 +15,9 @@ const logger = require('jitsi-meet-logger').getLogger(__filename);
 
 /**
  * Map of shortcuts. When a shortcut is registered it enters the mapping.
- * @type {{}}
+ * @type {Map}
  */
-const _shortcuts = {};
+const _shortcuts = new Map();
 
 /**
  * Map of registered keyboard keys and translation keys describing the
@@ -49,8 +49,8 @@ const KeyboardShortcut = {
             if (!($(':focus').is('input[type=text]')
                 || $(':focus').is('input[type=password]')
                 || $(':focus').is('textarea'))) {
-                if (_shortcuts.hasOwnProperty(key)) {
-                    _shortcuts[key].function(e);
+                if (_shortcuts.has(key)) {
+                    _shortcuts.get(key).function(e);
                 } else if (!isNaN(num) && num >= 0 && num <= 9) {
                     APP.UI.clickOnVideo(num);
                 }
@@ -91,6 +91,17 @@ const KeyboardShortcut = {
     },
 
     /**
+     * Opens the {@KeyboardShortcutsDialog} dialog.
+     *
+     * @returns {void}
+     */
+    openDialog() {
+        APP.store.dispatch(toggleDialog(KeyboardShortcutsDialog, {
+            shortcutDescriptions: _shortcutsHelp
+        }));
+    },
+
+    /**
      * Registers a new shortcut.
      *
      * @param shortcutChar the shortcut character triggering the action
@@ -106,11 +117,11 @@ const KeyboardShortcut = {
             shortcutAttr,
             exec,
             helpDescription) {
-        _shortcuts[shortcutChar] = {
+        _shortcuts.set(shortcutChar, {
             character: shortcutChar,
-            shortcutAttr,
-            function: exec
-        };
+            function: exec,
+            shortcutAttr
+        });
 
         if (helpDescription) {
             this._addShortcutToHelp(shortcutChar, helpDescription);
@@ -124,7 +135,7 @@ const KeyboardShortcut = {
      * no longer be usable
      */
     unregisterShortcut(shortcutChar) {
-        _shortcuts.remove(shortcutChar);
+        _shortcuts.delete(shortcutChar);
         _shortcutsHelp.delete(shortcutChar);
     },
 
@@ -133,7 +144,12 @@ const KeyboardShortcut = {
      * @returns {string} e.key or something close if not supported
      */
     _getKeyboardKey(e) {
-        if (typeof e.key === 'string') {
+        // If e.key is a string, then it is assumed it already plainly states
+        // the key pressed. This may not be true in all cases, such as with Edge
+        // and "?", when the browser cannot properly map a key press event to a
+        // keyboard key. To be safe, when a key is "Unidentified" it must be
+        // further analyzed by jitsi to a key using e.which.
+        if (typeof e.key === 'string' && e.key !== 'Unidentified') {
             return e.key;
         }
         if (e.type === 'keypress'
@@ -177,9 +193,7 @@ const KeyboardShortcut = {
     _initGlobalShortcuts() {
         this.registerShortcut('?', null, () => {
             sendAnalytics(createShortcutEvent('help'));
-            APP.store.dispatch(toggleDialog(KeyboardShortcutsDialog, {
-                shortcutDescriptions: _shortcutsHelp
-            }));
+            this.openDialog();
         }, 'keyboardShortcuts.toggleShortcuts');
 
         // register SPACE shortcut in two steps to insure visibility of help

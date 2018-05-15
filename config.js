@@ -57,6 +57,9 @@ var config = {
         // P2P test mode disables automatic switching to P2P when there are 2
         // participants in the conference.
         p2pTestMode: false
+
+        // Enables the test specific features consumed by jitsi-meet-torture
+        // testMode: false
     },
 
     // Disables ICE/UDP by filtering out local and remote UDP candidates in
@@ -177,6 +180,23 @@ var config = {
 
     // Disables or enables RTX (RFC 4588) (defaults to false).
     // disableRtx: false,
+
+    // Disables or enables TCC (the default is in Jicofo and set to true)
+    // (draft-holmer-rmcat-transport-wide-cc-extensions-01). This setting
+    // affects congestion control, it practically enables send-side bandwidth
+    // estimations.
+    // enableTcc: true,
+
+    // Disables or enables REMB (the default is in Jicofo and set to false)
+    // (draft-alvestrand-rmcat-remb-03). This setting affects congestion
+    // control, it practically enables recv-side bandwidth estimations. When
+    // both TCC and REMB are enabled, TCC takes precedence. When both are
+    // disabled, then bandwidth estimations are disabled.
+    // enableRemb: false,
+
+    // Defines the minimum number of participants to start a call (the default
+    // is set in Jicofo and set to 2).
+    // minParticipants: 2,
 
     // Use XEP-0215 to fetch STUN and TURN servers.
     // useStunTurn: true,
@@ -322,7 +342,6 @@ var config = {
     // List of undocumented settings used in jitsi-meet
     /**
      alwaysVisibleToolbar
-     autoEnableDesktopSharing
      autoRecord
      autoRecordToken
      debug

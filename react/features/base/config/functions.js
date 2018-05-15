@@ -2,6 +2,7 @@
 
 import _ from 'lodash';
 
+import { _CONFIG_STORE_PREFIX } from './constants';
 import parseURLParams from './parseURLParams';
 
 declare var $: Object;
@@ -20,13 +21,13 @@ const WHITELISTED_KEYS = [
     '_peerConnStatusRtcMuteTimeout',
     'abTesting',
     'alwaysVisibleToolbar',
-    'autoEnableDesktopSharing',
     'autoRecord',
     'autoRecordToken',
     'avgRtpStatsN',
     'callStatsConfIDNamespace',
     'callStatsID',
     'callStatsSecret',
+    'callUUID',
     'channelLastN',
     'constraints',
     'debug',
@@ -57,8 +58,10 @@ const WHITELISTED_KEYS = [
     'enableLipSync',
     'enableLocalVideoFlip',
     'enableRecording',
+    'enableRemb',
     'enableStatsID',
     'enableTalkWhileMuted',
+    'enableTcc',
     'enableUserRolesBasedOnToken',
     'etherpad_base',
     'failICE',
@@ -72,6 +75,7 @@ const WHITELISTED_KEYS = [
     'iAmSipGateway',
     'iceTransportPolicy',
     'ignoreStartMuted',
+    'minParticipants',
     'nick',
     'openBridgeChannel',
     'p2p',
@@ -233,6 +237,39 @@ function _getWhitelistedJSON(configName, configJSON) {
     }
 
     return _.pick(configJSON, WHITELISTED_KEYS);
+}
+
+/**
+ * Restores a Jitsi Meet config.js from {@code localStorage} if it was
+ * previously downloaded from a specific {@code baseURL} and stored with
+ * {@link storeConfig}.
+ *
+ * @param {string} baseURL - The base URL from which the config.js was
+ * previously downloaded and stored with {@code storeConfig}.
+ * @returns {?Object} The Jitsi Meet config.js which was previously downloaded
+ * from {@code baseURL} and stored with {@code storeConfig} if it was restored;
+ * otherwise, {@code undefined}.
+ */
+export function restoreConfig(baseURL: string): ?Object {
+    let storage;
+    const key = `${_CONFIG_STORE_PREFIX}/${baseURL}`;
+
+    try {
+        // XXX Even reading the property localStorage of window may throw an
+        // error (which is user agent-specific behavior).
+        storage = window.localStorage;
+
+        const config = storage.getItem(key);
+
+        if (config) {
+            return JSON.parse(config) || undefined;
+        }
+    } catch (e) {
+        // Somehow incorrect data ended up in the storage. Clean it up.
+        storage && storage.removeItem(key);
+    }
+
+    return undefined;
 }
 
 /* eslint-disable max-params */

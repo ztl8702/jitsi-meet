@@ -89,6 +89,8 @@ class StartLiveStreamDialog extends Component {
      * available for use for the logged in Google user's YouTube account.
      * @property {string} googleProfileEmail - The email of the user currently
      * logged in to the Google web client application.
+     * @property {string} selectedBoundStreamID - The boundStreamID of the
+     * broadcast currently selected in the broadcast dropdown.
      * @property {string} streamKey - The selected or entered stream key to use
      * for YouTube live streaming.
      */
@@ -96,7 +98,7 @@ class StartLiveStreamDialog extends Component {
         broadcasts: undefined,
         googleAPIState: GOOGLE_API_STATES.NEEDS_LOADING,
         googleProfileEmail: '',
-        selectedBroadcastID: undefined,
+        selectedBoundStreamID: undefined,
         streamKey: ''
     };
 
@@ -244,13 +246,7 @@ class StartLiveStreamDialog extends Component {
             })
             .then(() => googleApi.requestAvailableYouTubeBroadcasts())
             .then(response => {
-                const broadcasts = response.result.items.map(item => {
-                    return {
-                        title: item.snippet.title,
-                        boundStreamID: item.contentDetails.boundStreamId,
-                        status: item.status.lifeCycleStatus
-                    };
-                });
+                const broadcasts = this._parseBroadcasts(response.result.items);
 
                 this._setStateIfMounted({
                     broadcasts
@@ -297,7 +293,7 @@ class StartLiveStreamDialog extends Component {
     _onStreamKeyChange(event) {
         this._setStateIfMounted({
             streamKey: event.target.value,
-            selectedBroadcastID: undefined
+            selectedBoundStreamID: undefined
         });
     }
 
@@ -310,11 +306,22 @@ class StartLiveStreamDialog extends Component {
      * closing, true to close the modal.
      */
     _onSubmit() {
-        if (!this.state.streamKey) {
+        const { streamKey, selectedBoundStreamID } = this.state;
+
+        if (!streamKey) {
             return false;
         }
 
-        this.props.onSubmit(this.state.streamKey);
+        let selectedBroadcastID = null;
+
+        if (selectedBoundStreamID) {
+            const selectedBroadcast = this.state.broadcasts.find(
+                broadcast => broadcast.boundStreamID === selectedBoundStreamID);
+
+            selectedBroadcastID = selectedBroadcast && selectedBroadcast.id;
+        }
+
+        this.props.onSubmit(streamKey, selectedBroadcastID);
 
         return true;
     }
@@ -331,14 +338,47 @@ class StartLiveStreamDialog extends Component {
     _onYouTubeBroadcastIDSelected(boundStreamID) {
         return googleApi.requestLiveStreamsForYouTubeBroadcast(boundStreamID)
             .then(response => {
-                const found = response.result.items[0];
-                const streamKey = found.cdn.ingestionInfo.streamName;
+                const broadcasts = response.result.items;
+                const streamName = broadcasts
+                    && broadcasts[0]
+                    && broadcasts[0].cdn.ingestionInfo.streamName;
+                const streamKey = streamName || '';
 
                 this._setStateIfMounted({
                     streamKey,
-                    selectedBroadcastID: boundStreamID
+                    selectedBoundStreamID: boundStreamID
                 });
             });
+    }
+
+    /**
+     * Takes in a list of broadcasts from the YouTube API, removes dupes,
+     * removes broadcasts that cannot get a stream key, and parses the
+     * broadcasts into flat objects.
+     *
+     * @param {Array} broadcasts - Broadcast descriptions as obtained from
+     * calling the YouTube API.
+     * @private
+     * @returns {Array} An array of objects describing each unique broadcast.
+     */
+    _parseBroadcasts(broadcasts) {
+        const parsedBroadcasts = {};
+
+        for (let i = 0; i < broadcasts.length; i++) {
+            const broadcast = broadcasts[i];
+            const boundStreamID = broadcast.contentDetails.boundStreamId;
+
+            if (boundStreamID && !parsedBroadcasts[boundStreamID]) {
+                parsedBroadcasts[boundStreamID] = {
+                    boundStreamID,
+                    id: broadcast.id,
+                    status: broadcast.status.lifeCycleStatus,
+                    title: broadcast.snippet.title
+                };
+            }
+        }
+
+        return Object.values(parsedBroadcasts);
     }
 
     /**
@@ -352,7 +392,7 @@ class StartLiveStreamDialog extends Component {
         const {
             broadcasts,
             googleProfileEmail,
-            selectedBroadcastID
+            selectedBoundStreamID
         } = this.state;
 
         let googleContent, helpText;
@@ -373,7 +413,7 @@ class StartLiveStreamDialog extends Component {
                 <BroadcastsDropdown
                     broadcasts = { broadcasts }
                     onBroadcastSelected = { this._onYouTubeBroadcastIDSelected }
-                    selectedBroadcastID = { selectedBroadcastID } />
+                    selectedBoundStreamID = { selectedBoundStreamID } />
             );
 
             /**

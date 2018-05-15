@@ -1,13 +1,26 @@
 /**
- * The type of the action which signals a request to display the inline
- * conference info dialog.
+ * The type of the (redux) action which signals that a click/tap has been
+ * performed on {@link InviteButton} and that the execution flow for
+ * adding/inviting people to the current conference/meeting is to begin.
  *
  * {
- *     type: SET_INFO_DIALOG_VISIBILITY,
- *     visible: boolean
+ *     type: BEGIN_ADD_PEOPLE
  * }
  */
-export const SET_INFO_DIALOG_VISIBILITY = Symbol('SET_INFO_DIALOG_VISIBILITY');
+export const BEGIN_ADD_PEOPLE = Symbol('BEGIN_ADD_PEOPLE');
+
+/**
+ * The type of redux action to set the {@code EventEmitter} subscriptions
+ * utilized by the feature invite.
+ *
+ * {
+ *     type: _SET_EMITTER_SUBSCRIPTIONS,
+ *     emitterSubscriptions: Array|undefined
+ * }
+ *
+ * @protected
+ */
+export const _SET_EMITTER_SUBSCRIPTIONS = Symbol('_SET_EMITTER_SUBSCRIPTIONS');
 
 /**
  * The type of the action which signals an error occurred while requesting dial-

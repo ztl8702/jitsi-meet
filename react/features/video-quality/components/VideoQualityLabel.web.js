@@ -4,6 +4,8 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
 import { translate } from '../../base/i18n';
+import { MEDIA_TYPE } from '../../base/media';
+import { getTrackByMediaTypeAndParticipant } from '../../base/tracks';
 
 /**
  * A map of video resolution (number) to translation key.
@@ -63,6 +65,11 @@ export class VideoQualityLabel extends Component {
         _resolution: PropTypes.number,
 
         /**
+         * The redux representation of the JitsiTrack displayed on large video.
+         */
+        _videoTrack: PropTypes.object,
+
+        /**
          * Invoked to obtain translated strings.
          */
         t: PropTypes.func
@@ -116,6 +123,7 @@ export class VideoQualityLabel extends Component {
             _conferenceStarted,
             _filmstripVisible,
             _resolution,
+            _videoTrack,
             t
         } = this.props;
 
@@ -134,20 +142,34 @@ export class VideoQualityLabel extends Component {
         const opening = this.state.togglingToVisible ? 'opening' : '';
         const classNames
             = `${baseClasses} ${filmstrip} ${opening}`;
-        const tooltipKey
-            = `videoStatus.labelTooltip${_audioOnly ? 'AudioOnly' : 'Video'}`;
+
+        let labelContent;
+        let tooltipKey;
+
+        if (_audioOnly) {
+            labelContent = <i className = 'icon-visibility-off' />;
+            tooltipKey = 'videoStatus.labelTooltipAudioOnly';
+        } else if (!_videoTrack || _videoTrack.muted) {
+            labelContent = <i className = 'icon-visibility-off' />;
+            tooltipKey = 'videoStatus.labelTooiltipNoVideo';
+        } else {
+            const translationKeys
+                = this._mapResolutionToTranslationsKeys(_resolution);
+
+            labelContent = t(translationKeys.labelKey);
+            tooltipKey = translationKeys.tooltipKey;
+        }
+
 
         return (
             <div
                 className = { classNames }
                 id = 'videoResolutionLabel'>
                 <Tooltip
-                    description = { t(tooltipKey) }
+                    content = { t(tooltipKey) }
                     position = { 'left' }>
                     <div className = 'video-quality-label-status'>
-                        { _audioOnly
-                            ? <i className = 'icon-visibility-off' />
-                            : this._mapResolutionToTranslation(_resolution) }
+                        { labelContent }
                     </div>
                 </Tooltip>
             </div>
@@ -155,16 +177,16 @@ export class VideoQualityLabel extends Component {
     }
 
     /**
-     * Matches the passed in resolution with a translation key for describing
+     * Matches the passed in resolution with a translation keys for describing
      * the resolution. The passed in resolution will be matched with a known
      * resolution that it is at least greater than or equal to.
      *
      * @param {number} resolution - The video height to match with a
      * translation.
      * @private
-     * @returns {string}
+     * @returns {Object}
      */
-    _mapResolutionToTranslation(resolution) {
+    _mapResolutionToTranslationsKeys(resolution) {
         // Set the default matching resolution of the lowest just in case a
         // match is not found.
         let highestMatchingResolution = RESOLUTIONS[0];
@@ -179,8 +201,13 @@ export class VideoQualityLabel extends Component {
             }
         }
 
-        return this.props.t(
-            RESOLUTION_TO_TRANSLATION_KEY[highestMatchingResolution]);
+        const labelKey
+            = RESOLUTION_TO_TRANSLATION_KEY[highestMatchingResolution];
+
+        return {
+            labelKey,
+            tooltipKey: `${labelKey}Tooltip`
+        };
     }
 }
 
@@ -194,19 +221,26 @@ export class VideoQualityLabel extends Component {
  *     _audioOnly: boolean,
  *     _conferenceStarted: boolean,
  *     _filmstripVisible: true,
- *     _resolution: number
+ *     _resolution: number,
+ *     _videoTrack: Object
  * }}
  */
 function _mapStateToProps(state) {
     const { audioOnly, conference } = state['features/base/conference'];
     const { visible } = state['features/filmstrip'];
-    const { resolution } = state['features/large-video'];
+    const { resolution, participantId } = state['features/large-video'];
+    const videoTrackOnLargeVideo = getTrackByMediaTypeAndParticipant(
+        state['features/base/tracks'],
+        MEDIA_TYPE.VIDEO,
+        participantId
+    );
 
     return {
         _audioOnly: audioOnly,
         _conferenceStarted: Boolean(conference),
         _filmstripVisible: visible,
-        _resolution: resolution
+        _resolution: resolution,
+        _videoTrack: videoTrackOnLargeVideo
     };
 }
 

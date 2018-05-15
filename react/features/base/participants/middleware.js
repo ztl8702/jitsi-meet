@@ -1,4 +1,4 @@
-/* @flow */
+// @flow
 
 import UIEvents from '../../../../service/UI/UIEvents';
 
@@ -10,8 +10,13 @@ import {
 import { MiddlewareRegistry } from '../redux';
 import { playSound, registerSound, unregisterSound } from '../sounds';
 
-import { localParticipantIdChanged } from './actions';
 import {
+    localParticipantIdChanged,
+    localParticipantJoined,
+    participantUpdated
+} from './actions';
+import {
+    DOMINANT_SPEAKER_CHANGED,
     KICK_PARTICIPANT,
     MUTE_REMOTE_PARTICIPANT,
     PARTICIPANT_DISPLAY_NAME_CHANGED,
@@ -27,12 +32,10 @@ import {
 import {
     getAvatarURLByParticipantId,
     getLocalParticipant,
+    getParticipantById,
     getParticipantCount
 } from './functions';
-import {
-    PARTICIPANT_JOINED_SRC,
-    PARTICIPANT_LEFT_SRC
-} from './sounds';
+import { PARTICIPANT_JOINED_FILE, PARTICIPANT_LEFT_FILE } from './sounds';
 
 declare var APP: Object;
 
@@ -47,14 +50,15 @@ MiddlewareRegistry.register(store => next => action => {
     const { conference } = store.getState()['features/base/conference'];
 
     if (action.type === PARTICIPANT_JOINED
-        || action.type === PARTICIPANT_LEFT) {
+            || action.type === PARTICIPANT_LEFT) {
         _maybePlaySounds(store, action);
     }
 
     switch (action.type) {
     case APP_WILL_MOUNT:
         _registerSounds(store);
-        break;
+
+        return _localParticipantJoined(store, next, action);
     case APP_WILL_UNMOUNT:
         _unregisterSounds(store);
         break;
@@ -65,6 +69,27 @@ MiddlewareRegistry.register(store => next => action => {
     case CONFERENCE_LEFT:
         store.dispatch(localParticipantIdChanged(LOCAL_PARTICIPANT_DEFAULT_ID));
         break;
+
+    case DOMINANT_SPEAKER_CHANGED: {
+        // Ensure the raised hand state is cleared for the dominant speaker.
+        const participant = getLocalParticipant(store.getState());
+
+        if (participant) {
+            const local = participant.id === action.participant.id;
+
+            store.dispatch(participantUpdated({
+                id: action.participant.id,
+                local,
+                raisedHand: false
+            }));
+        }
+
+        if (typeof APP === 'object') {
+            APP.UI.markDominantSpeaker(action.participant.id);
+        }
+
+        break;
+    }
 
     case KICK_PARTICIPANT:
         conference.kickParticipant(action.id);
@@ -90,10 +115,37 @@ MiddlewareRegistry.register(store => next => action => {
 
     case PARTICIPANT_JOINED:
     case PARTICIPANT_UPDATED: {
-        if (typeof APP !== 'undefined') {
-            const participant = action.participant;
-            const { id, local } = participant;
+        const { participant } = action;
+        const { id, local, raisedHand } = participant;
 
+        // Send an external update of the local participant's raised hand state
+        // if a new raised hand state is defined in the action.
+        if (typeof raisedHand !== 'undefined') {
+            if (local) {
+                conference.setLocalParticipantProperty(
+                    'raisedHand',
+                    raisedHand);
+            }
+
+            if (typeof APP === 'object') {
+                if (local) {
+                    APP.UI.onLocalRaiseHandChanged(raisedHand);
+                    APP.UI.setLocalRaisedHandStatus(raisedHand);
+                } else {
+                    const remoteParticipant
+                        = getParticipantById(store.getState(), id);
+
+                    remoteParticipant
+                        && APP.UI.setRaisedHandStatus(
+                            remoteParticipant.id,
+                            remoteParticipant.name,
+                            raisedHand);
+                }
+            }
+        }
+
+        // Notify external listeners of potential avatarURL changes.
+        if (typeof APP === 'object') {
             const preUpdateAvatarURL
                 = getAvatarURLByParticipantId(store.getState(), id);
 
@@ -123,6 +175,33 @@ MiddlewareRegistry.register(store => next => action => {
 
     return next(action);
 });
+
+/**
+ * Initializes the local participant and signals that it joined.
+ *
+ * @private
+ * @param {Store} store - The Redux store.
+ * @param {Dispatch} next - The redux dispatch function to dispatch the
+ * specified action to the specified store.
+ * @param {Action} action - The redux action which is being dispatched
+ * in the specified store.
+ * @private
+ * @returns {Object} The value returned by {@code next(action)}.
+ */
+function _localParticipantJoined({ getState, dispatch }, next, action) {
+    const result = next(action);
+    const settings = getState()['features/base/settings'];
+    const localParticipant = {
+        avatarID: settings.avatarID,
+        avatarURL: settings.avatarURL,
+        email: settings.email,
+        name: settings.displayName
+    };
+
+    dispatch(localParticipantJoined(localParticipant));
+
+    return result;
+}
 
 /**
  * Plays sounds when participants join/leave conference.
@@ -161,9 +240,9 @@ function _maybePlaySounds({ getState, dispatch }, action) {
  */
 function _registerSounds({ dispatch }) {
     dispatch(
-        registerSound(PARTICIPANT_JOINED_SOUND_ID, PARTICIPANT_JOINED_SRC));
+        registerSound(PARTICIPANT_JOINED_SOUND_ID, PARTICIPANT_JOINED_FILE));
     dispatch(
-        registerSound(PARTICIPANT_LEFT_SOUND_ID, PARTICIPANT_LEFT_SRC));
+        registerSound(PARTICIPANT_LEFT_SOUND_ID, PARTICIPANT_LEFT_FILE));
 }
 
 /**
@@ -175,7 +254,7 @@ function _registerSounds({ dispatch }) {
  */
 function _unregisterSounds({ dispatch }) {
     dispatch(
-        unregisterSound(PARTICIPANT_JOINED_SOUND_ID, PARTICIPANT_JOINED_SRC));
+        unregisterSound(PARTICIPANT_JOINED_SOUND_ID));
     dispatch(
-        unregisterSound(PARTICIPANT_LEFT_SOUND_ID, PARTICIPANT_LEFT_SRC));
+        unregisterSound(PARTICIPANT_LEFT_SOUND_ID));
 }

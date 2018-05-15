@@ -7,24 +7,16 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
 import { createInviteDialogEvent, sendAnalytics } from '../../analytics';
-import { getInviteURL } from '../../base/connection';
 import { Dialog, hideDialog } from '../../base/dialog';
 import { translate } from '../../base/i18n';
 import { MultiSelectAutocomplete } from '../../base/react';
-import { inviteVideoRooms } from '../../videosipgw';
 
-import {
-    checkDialNumber,
-    invitePeopleAndChatRooms,
-    searchDirectory
-} from '../functions';
+import { invite } from '../actions';
+import { getInviteResultsForQuery, getInviteTypeCounts } from '../functions';
 
 const logger = require('jitsi-meet-logger').getLogger(__filename);
 
 declare var interfaceConfig: Object;
-
-const isPhoneNumberRegex
-    = new RegExp(interfaceConfig.PHONE_NUMBER_REGEX || '^[0-9+()-\\s]*$');
 
 /**
  * The dialog that allows to invite people to the call.
@@ -48,16 +40,6 @@ class AddPeopleDialog extends Component<*, *> {
         _dialOutAuthUrl: PropTypes.string,
 
         /**
-         * The URL pointing to the service allowing for people invite.
-         */
-        _inviteServiceUrl: PropTypes.string,
-
-        /**
-         * The url of the conference to invite people to.
-         */
-        _inviteUrl: PropTypes.string,
-
-        /**
          * The JWT token.
          */
         _jwt: PropTypes.string,
@@ -75,22 +57,17 @@ class AddPeopleDialog extends Component<*, *> {
         /**
          * Whether or not to show Add People functionality.
          */
-        enableAddPeople: PropTypes.bool,
+        addPeopleEnabled: PropTypes.bool,
 
         /**
          * Whether or not to show Dial Out functionality.
          */
-        enableDialOut: PropTypes.bool,
+        dialOutEnabled: PropTypes.bool,
 
         /**
-         * The function closing the dialog.
+         * The redux {@code dispatch} function.
          */
-        hideDialog: PropTypes.func,
-
-        /**
-         * Used to invite video rooms.
-         */
-        inviteVideoRooms: PropTypes.func,
+        dispatch: PropTypes.func,
 
         /**
          * Invoked to obtain translated strings.
@@ -191,21 +168,21 @@ class AddPeopleDialog extends Component<*, *> {
      * @returns {ReactElement}
      */
     render() {
-        const { enableAddPeople, enableDialOut, t } = this.props;
+        const { addPeopleEnabled, dialOutEnabled, t } = this.props;
         let isMultiSelectDisabled = this.state.addToCallInProgress || false;
         let placeholder;
         let loadingMessage;
         let noMatches;
 
-        if (enableAddPeople && enableDialOut) {
+        if (addPeopleEnabled && dialOutEnabled) {
             loadingMessage = 'addPeople.loading';
             noMatches = 'addPeople.noResults';
             placeholder = 'addPeople.searchPeopleAndNumbers';
-        } else if (enableAddPeople) {
+        } else if (addPeopleEnabled) {
             loadingMessage = 'addPeople.loadingPeople';
             noMatches = 'addPeople.noResults';
             placeholder = 'addPeople.searchPeople';
-        } else if (enableDialOut) {
+        } else if (dialOutEnabled) {
             loadingMessage = 'addPeople.loadingNumber';
             noMatches = 'addPeople.noValidNumbers';
             placeholder = 'addPeople.searchNumbers';
@@ -240,46 +217,6 @@ class AddPeopleDialog extends Component<*, *> {
         );
     }
 
-    _getDigitsOnly: (string) => string;
-
-    /**
-     * Removes all non-numeric characters from a string.
-     *
-     * @param {string} text - The string from which to remove all characters
-     * except numbers.
-     * @private
-     * @returns {string} A string with only numbers.
-     */
-    _getDigitsOnly(text = '') {
-        return text.replace(/\D/g, '');
-    }
-
-    /**
-     * Helper for determining how many of each type of user is being invited.
-     * Used for logging and sending analytics related to invites.
-     *
-     * @param {Array} inviteItems - An array with the invite items, as created
-     * in {@link _parseQueryResults}.
-     * @private
-     * @returns {Object} An object with keys as user types and values as the
-     * number of invites for that type.
-     */
-    _getInviteTypeCounts(inviteItems = []) {
-        const inviteTypeCounts = {};
-
-        inviteItems.forEach(i => {
-            const type = i.item.type;
-
-            if (!inviteTypeCounts[type]) {
-                inviteTypeCounts[type] = 0;
-            }
-
-            inviteTypeCounts[type]++;
-        });
-
-        return inviteTypeCounts;
-    }
-
     _isAddDisabled: () => boolean;
 
     /**
@@ -292,27 +229,6 @@ class AddPeopleDialog extends Component<*, *> {
     _isAddDisabled() {
         return !this.state.inviteItems.length
             || this.state.addToCallInProgress;
-    }
-
-    _isMaybeAPhoneNumber: (string) => boolean;
-
-    /**
-     * Checks whether a string looks like it could be for a phone number.
-     *
-     * @param {string} text - The text to check whether or not it could be a
-     * phone number.
-     * @private
-     * @returns {boolean} True if the string looks like it could be a phone
-     * number.
-     */
-    _isMaybeAPhoneNumber(text) {
-        if (!isPhoneNumberRegex.test(text)) {
-            return false;
-        }
-
-        const digits = this._getDigitsOnly(text);
-
-        return Boolean(digits.length);
     }
 
     _onItemSelected: (Object) => Object;
@@ -362,8 +278,9 @@ class AddPeopleDialog extends Component<*, *> {
      * @returns {void}
      */
     _onSubmit() {
-        const inviteTypeCounts
-            = this._getInviteTypeCounts(this.state.inviteItems);
+        const { inviteItems } = this.state;
+        const invitees = inviteItems.map(({ item }) => item);
+        const inviteTypeCounts = getInviteTypeCounts(invitees);
 
         sendAnalytics(createInviteDialogEvent(
             'clicked', 'inviteButton', {
@@ -379,80 +296,15 @@ class AddPeopleDialog extends Component<*, *> {
             addToCallInProgress: true
         });
 
-        let allInvitePromises = [];
-        let invitesLeftToSend = [
-            ...this.state.inviteItems
-        ];
+        const { dispatch } = this.props;
 
-        // First create all promises for dialing out.
-        if (this.props.enableDialOut && this.props._conference) {
-            const phoneNumbers = invitesLeftToSend.filter(
-                ({ item }) => item.type === 'phone');
-
-            // For each number, dial out. On success, remove the number from
-            // {@link invitesLeftToSend}.
-            const phoneInvitePromises = phoneNumbers.map(number => {
-                const numberToInvite = this._getDigitsOnly(number.item.number);
-
-                return this.props._conference.dial(numberToInvite)
-                        .then(() => {
-                            invitesLeftToSend
-                                = invitesLeftToSend.filter(invite =>
-                                    invite !== number);
-                        })
-                        .catch(error => logger.error(
-                            'Error inviting phone number:', error));
-
-            });
-
-            allInvitePromises = allInvitePromises.concat(phoneInvitePromises);
-        }
-
-        if (this.props.enableAddPeople) {
-            const usersAndRooms = invitesLeftToSend.filter(i =>
-                i.item.type === 'user' || i.item.type === 'room')
-                .map(i => i.item);
-
-            if (usersAndRooms.length) {
-                // Send a request to invite all the rooms and users. On success,
-                // filter all rooms and users from {@link invitesLeftToSend}.
-                const peopleInvitePromise = invitePeopleAndChatRooms(
-                    this.props._inviteServiceUrl,
-                    this.props._inviteUrl,
-                    this.props._jwt,
-                    usersAndRooms)
-                    .then(() => {
-                        invitesLeftToSend = invitesLeftToSend.filter(i =>
-                            i.item.type !== 'user' && i.item.type !== 'room');
-                    })
-                    .catch(error => logger.error(
-                        'Error inviting people:', error));
-
-                allInvitePromises.push(peopleInvitePromise);
-            }
-
-            // Sipgw calls are fire and forget. Invite them to the conference
-            // then immediately remove them from {@link invitesLeftToSend}.
-            const vrooms = invitesLeftToSend.filter(i =>
-                i.item.type === 'videosipgw')
-                .map(i => i.item);
-
-            this.props._conference
-                && vrooms.length > 0
-                && this.props.inviteVideoRooms(
-                    this.props._conference, vrooms);
-
-            invitesLeftToSend = invitesLeftToSend.filter(i =>
-                i.item.type !== 'videosipgw');
-        }
-
-        Promise.all(allInvitePromises)
-            .then(() => {
+        dispatch(invite(invitees))
+            .then(invitesLeftToSend => {
                 // If any invites are left that means something failed to send
                 // so treat it as an error.
                 if (invitesLeftToSend.length) {
                     const erroredInviteTypeCounts
-                        = this._getInviteTypeCounts(invitesLeftToSend);
+                        = getInviteTypeCounts(invitesLeftToSend);
 
                     logger.error(`${invitesLeftToSend.length} invites failed`,
                         erroredInviteTypeCounts);
@@ -467,8 +319,15 @@ class AddPeopleDialog extends Component<*, *> {
                         addToCallError: true
                     });
 
+                    const unsentInviteIDs
+                        = invitesLeftToSend.map(invitee =>
+                            invitee.id || invitee.number);
+                    const itemsToSelect
+                        = inviteItems.filter(({ item }) =>
+                            unsentInviteIDs.includes(item.id || item.number));
+
                     if (this._multiselect) {
-                        this._multiselect.setSelectedItems(invitesLeftToSend);
+                        this._multiselect.setSelectedItems(itemsToSelect);
                     }
 
                     return;
@@ -478,7 +337,7 @@ class AddPeopleDialog extends Component<*, *> {
                     addToCallInProgress: false
                 });
 
-                this.props.hideDialog();
+                dispatch(hideDialog());
             });
     }
 
@@ -502,7 +361,7 @@ class AddPeopleDialog extends Component<*, *> {
             return {
                 content: user.name,
                 elemBefore: <Avatar
-                    size = 'medium'
+                    size = 'small'
                     src = { user.avatar } />,
                 item: user,
                 tag: {
@@ -558,82 +417,24 @@ class AddPeopleDialog extends Component<*, *> {
      * @returns {Promise}
      */
     _query(query = '') {
-        const text = query.trim();
         const {
+            addPeopleEnabled,
+            dialOutEnabled,
             _dialOutAuthUrl,
             _jwt,
             _peopleSearchQueryTypes,
             _peopleSearchUrl
         } = this.props;
+        const options = {
+            dialOutAuthUrl: _dialOutAuthUrl,
+            addPeopleEnabled,
+            dialOutEnabled,
+            jwt: _jwt,
+            peopleSearchQueryTypes: _peopleSearchQueryTypes,
+            peopleSearchUrl: _peopleSearchUrl
+        };
 
-        let peopleSearchPromise;
-
-        if (this.props.enableAddPeople && text) {
-            peopleSearchPromise = searchDirectory(
-                _peopleSearchUrl,
-                _jwt,
-                text,
-                _peopleSearchQueryTypes);
-        } else {
-            peopleSearchPromise = Promise.resolve([]);
-        }
-
-
-        const hasCountryCode = text.startsWith('+');
-        let phoneNumberPromise;
-
-        if (this.props.enableDialOut && this._isMaybeAPhoneNumber(text)) {
-            let numberToVerify = text;
-
-            // When the number to verify does not start with a +, we assume no
-            // proper country code has been entered. In such a case, prepend 1
-            // for the country code. The service currently takes care of
-            // prepending the +.
-            if (!hasCountryCode && !text.startsWith('1')) {
-                numberToVerify = `1${numberToVerify}`;
-            }
-
-            // The validation service works properly when the query is digits
-            // only so ensure only digits get sent.
-            numberToVerify = this._getDigitsOnly(numberToVerify);
-
-            phoneNumberPromise
-                = checkDialNumber(numberToVerify, _dialOutAuthUrl);
-        } else {
-            phoneNumberPromise = Promise.resolve({});
-        }
-
-        return Promise.all([ peopleSearchPromise, phoneNumberPromise ])
-            .then(([ peopleResults, phoneResults ]) => {
-                const results = [
-                    ...peopleResults
-                ];
-
-                /**
-                 * This check for phone results is for the day the call to
-                 * searching people might return phone results as well. When
-                 * that day comes this check will make it so the server checks
-                 * are honored and the local appending of the number is not
-                 * done. The local appending of the phone number can then be
-                 * cleaned up when convenient.
-                 */
-                const hasPhoneResult = peopleResults.find(
-                    result => result.type === 'phone');
-
-                if (!hasPhoneResult
-                        && typeof phoneResults.allow === 'boolean') {
-                    results.push({
-                        allowed: phoneResults.allow,
-                        country: phoneResults.country,
-                        type: 'phone',
-                        number: phoneResults.phone,
-                        originalEntry: text,
-                        showCountryCodeReminder: !hasCountryCode
-                    });
-                }
-
-                return results;
-            });
+        return getInviteResultsForQuery(query, options);
     }
 
     /**
@@ -715,36 +516,25 @@ class AddPeopleDialog extends Component<*, *> {
  * @param {Object} state - The Redux state.
  * @private
  * @returns {{
- *     _conference: Object,
  *     _dialOutAuthUrl: string,
- *     _inviteServiceUrl: string,
- *     _inviteUrl: string,
  *     _jwt: string,
  *     _peopleSearchQueryTypes: Array<string>,
  *     _peopleSearchUrl: string
  * }}
  */
 function _mapStateToProps(state) {
-    const { conference } = state['features/base/conference'];
     const {
         dialOutAuthUrl,
-        inviteServiceUrl,
         peopleSearchQueryTypes,
         peopleSearchUrl
     } = state['features/base/config'];
 
     return {
-        _conference: conference,
         _dialOutAuthUrl: dialOutAuthUrl,
-        _inviteServiceUrl: inviteServiceUrl,
-        _inviteUrl: getInviteURL(state),
         _jwt: state['features/base/jwt'].jwt,
         _peopleSearchQueryTypes: peopleSearchQueryTypes,
         _peopleSearchUrl: peopleSearchUrl
     };
 }
 
-export default translate(connect(_mapStateToProps, {
-    hideDialog,
-    inviteVideoRooms })(
-    AddPeopleDialog));
+export default translate(connect(_mapStateToProps)(AddPeopleDialog));

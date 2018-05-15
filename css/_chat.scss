@@ -62,6 +62,36 @@
 .localuser {
     color: #087dba;
 }
+.use-new-toolbox {
+    .chatmessage {
+        color: white;
+    }
+
+    .localuser {
+        color: #4C9AFF;
+    }
+
+    .remoteuser {
+        color: #B8C7E0;
+    }
+
+    #usermsg {
+        color: white;
+    }
+
+    .chatmessage,
+    #smileysarea,
+    #smileysContainer,
+    #usermsg {
+        background-color: $newToolbarBackgroundColor;
+    }
+
+    .smileyContainer:hover {
+        background-color: $newToolbarButtonToggleColor;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+}
 
 .errorMessage {
     color: red;

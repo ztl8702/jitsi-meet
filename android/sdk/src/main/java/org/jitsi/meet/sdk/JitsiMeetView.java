@@ -17,11 +17,9 @@
 package org.jitsi.meet.sdk;
 
 import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -30,19 +28,13 @@ import android.widget.FrameLayout;
 
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactRootView;
-import com.facebook.react.bridge.NativeModule;
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContext;
-import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.common.LifecycleState;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
-import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.rnimmersive.RNImmersiveModule;
 
+import org.jitsi.meet.sdk.invite.InviteController;
+
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
@@ -60,27 +52,8 @@ public class JitsiMeetView extends FrameLayout {
      */
     private final static String TAG = JitsiMeetView.class.getSimpleName();
 
-    /**
-     * React Native bridge. The instance manager allows embedding applications
-     * to create multiple root views off the same JavaScript bundle.
-     */
-    private static ReactInstanceManager reactInstanceManager;
-
     private static final Set<JitsiMeetView> views
         = Collections.newSetFromMap(new WeakHashMap<JitsiMeetView, Boolean>());
-
-    private static List<NativeModule> createNativeModules(
-            ReactApplicationContext reactContext) {
-        return Arrays.<NativeModule>asList(
-            new AndroidSettingsModule(reactContext),
-            new AppInfoModule(reactContext),
-            new AudioModeModule(reactContext),
-            new ExternalAPIModule(reactContext),
-            new PictureInPictureModule(reactContext),
-            new ProximityModule(reactContext),
-            new WiFiStatsModule(reactContext)
-        );
-    }
 
     public static JitsiMeetView findViewByExternalAPIScope(
             String externalAPIScope) {
@@ -93,47 +66,6 @@ public class JitsiMeetView extends FrameLayout {
         }
 
         return null;
-    }
-
-    // XXX Strictly internal use only (at the time of this writing)!
-    static ReactInstanceManager getReactInstanceManager() {
-        return reactInstanceManager;
-    }
-
-    /**
-     * Internal method to initialize the React Native instance manager. We
-     * create a single instance in order to load the JavaScript bundle a single
-     * time. All {@code ReactRootView} instances will be tied to the one and
-     * only {@code ReactInstanceManager}.
-     *
-     * @param application {@code Application} instance which is running.
-     */
-    private static void initReactInstanceManager(Application application) {
-        reactInstanceManager
-            = ReactInstanceManager.builder()
-                .setApplication(application)
-                .setBundleAssetName("index.android.bundle")
-                .setJSMainModulePath("index.android")
-                .addPackage(new com.calendarevents.CalendarEventsPackage())
-                .addPackage(new com.corbt.keepawake.KCKeepAwakePackage())
-                .addPackage(new com.facebook.react.shell.MainReactPackage())
-                .addPackage(new com.i18n.reactnativei18n.ReactNativeI18n())
-                .addPackage(new com.oblador.vectoricons.VectorIconsPackage())
-                .addPackage(new com.ocetnik.timer.BackgroundTimerPackage())
-                .addPackage(new com.oney.WebRTCModule.WebRTCModulePackage())
-                .addPackage(new com.RNFetchBlob.RNFetchBlobPackage())
-                .addPackage(new com.rnimmersive.RNImmersivePackage())
-                .addPackage(new com.zmxv.RNSound.RNSoundPackage())
-                .addPackage(new ReactPackageAdapter() {
-                    @Override
-                    public List<NativeModule> createNativeModules(
-                            ReactApplicationContext reactContext) {
-                        return JitsiMeetView.createNativeModules(reactContext);
-                    }
-                })
-                .setUseDeveloperSupport(BuildConfig.DEBUG)
-                .setInitialLifecycleState(LifecycleState.RESUMED)
-                .build();
     }
 
     /**
@@ -170,6 +102,9 @@ public class JitsiMeetView extends FrameLayout {
      * implementation.
      */
     public static boolean onBackPressed() {
+        ReactInstanceManager reactInstanceManager
+            = ReactInstanceManagerHolder.getReactInstanceManager();
+
         if (reactInstanceManager == null) {
             return false;
         } else {
@@ -186,6 +121,9 @@ public class JitsiMeetView extends FrameLayout {
      * @param activity {@code Activity} being destroyed.
      */
     public static void onHostDestroy(Activity activity) {
+        ReactInstanceManager reactInstanceManager
+            = ReactInstanceManagerHolder.getReactInstanceManager();
+
         if (reactInstanceManager != null) {
             reactInstanceManager.onHostDestroy(activity);
         }
@@ -198,6 +136,9 @@ public class JitsiMeetView extends FrameLayout {
      * @param activity {@code Activity} being paused.
      */
     public static void onHostPause(Activity activity) {
+        ReactInstanceManager reactInstanceManager
+            = ReactInstanceManagerHolder.getReactInstanceManager();
+
         if (reactInstanceManager != null) {
             reactInstanceManager.onHostPause(activity);
         }
@@ -224,6 +165,9 @@ public class JitsiMeetView extends FrameLayout {
     public static void onHostResume(
             Activity activity,
             DefaultHardwareBackBtnHandler defaultBackButtonImpl) {
+        ReactInstanceManager reactInstanceManager
+            = ReactInstanceManagerHolder.getReactInstanceManager();
+
         if (reactInstanceManager != null) {
             reactInstanceManager.onHostResume(activity, defaultBackButtonImpl);
         }
@@ -252,40 +196,11 @@ public class JitsiMeetView extends FrameLayout {
             return;
         }
 
+        ReactInstanceManager reactInstanceManager
+            = ReactInstanceManagerHolder.getReactInstanceManager();
+
         if (reactInstanceManager != null) {
             reactInstanceManager.onNewIntent(intent);
-        }
-    }
-
-    /**
-     * Activity lifecycle method which should be called from
-     * {@code Activity.onUserLeaveHint} so we can do the required internal
-     * processing.
-     *
-     * This is currently not mandatory.
-     */
-    public static void onUserLeaveHint() {
-        sendEvent("onUserLeaveHint", null);
-    }
-
-    /**
-     * Helper function to send an event to JavaScript.
-     *
-     * @param eventName {@code String} containing the event name.
-     * @param params {@code WritableMap} optional ancillary data for the event.
-     */
-    private static void sendEvent(
-            String eventName,
-            @Nullable WritableMap params) {
-        if (reactInstanceManager != null) {
-            ReactContext reactContext
-                = reactInstanceManager.getCurrentReactContext();
-            if (reactContext != null) {
-                reactContext
-                    .getJSModule(
-                        DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit(eventName, params);
-            }
         }
     }
 
@@ -303,6 +218,12 @@ public class JitsiMeetView extends FrameLayout {
      * external API.
      */
     private final String externalAPIScope;
+
+    /**
+     * The entry point into the invite feature of Jitsi Meet. The Java
+     * counterpart of the JavaScript {@code InviteButton}.
+     */
+    private final InviteController inviteController;
 
     /**
      * {@link JitsiMeetViewListener} instance for reporting events occurring in
@@ -323,6 +244,13 @@ public class JitsiMeetView extends FrameLayout {
     private ReactRootView reactRootView;
 
     /**
+     * The URL of the current conference.
+     */
+    // XXX Currently, one thread writes and one thread reads, so it should be
+    // fine to have this field volatile without additional synchronization.
+    private volatile String url;
+
+    /**
      * Whether the Welcome page is enabled.
      */
     private boolean welcomePageEnabled;
@@ -332,15 +260,18 @@ public class JitsiMeetView extends FrameLayout {
 
         setBackgroundColor(BACKGROUND_COLOR);
 
-        if (reactInstanceManager == null) {
-            initReactInstanceManager(((Activity) context).getApplication());
-        }
+        ReactInstanceManagerHolder.initReactInstanceManager(
+            ((Activity) context).getApplication());
 
         // Hook this JitsiMeetView into ExternalAPI.
         externalAPIScope = UUID.randomUUID().toString();
         synchronized (views) {
             views.add(this);
         }
+
+        // The entry point into the invite feature of Jitsi Meet. The Java
+        // counterpart of the JavaScript InviteButton.
+        inviteController = new InviteController(externalAPIScope);
     }
 
     /**
@@ -372,6 +303,19 @@ public class JitsiMeetView extends FrameLayout {
     }
 
     /**
+     * Gets the {@link InviteController} which represents the entry point into
+     * the invite feature of Jitsi Meet and is the Java counterpart of the
+     * JavaScript {@code InviteButton}.
+     *
+     * @return the {@link InviteController} which represents the entry point
+     * into the invite feature of Jitsi Meet and is the Java counterpart of the
+     * JavaScript {@code InviteButton}
+     */
+    public InviteController getInviteController() {
+        return inviteController;
+    }
+
+    /**
      * Gets the {@link JitsiMeetViewListener} set on this {@code JitsiMeetView}.
      *
      * @return The {@code JitsiMeetViewListener} set on this
@@ -394,6 +338,19 @@ public class JitsiMeetView extends FrameLayout {
             PictureInPictureModule.isPictureInPictureSupported()
                 && (pictureInPictureEnabled == null
                     || pictureInPictureEnabled.booleanValue());
+    }
+
+    /**
+     * Gets the URL of the current conference.
+     *
+     * XXX The method is meant for internal purposes only at the time of this
+     * writing because there is no equivalent API on iOS.
+     *
+     * @return the URL {@code String} of the current conference if any;
+     * otherwise, {@code null}.
+     */
+    String getURL() {
+        return url;
     }
 
     /**
@@ -441,6 +398,18 @@ public class JitsiMeetView extends FrameLayout {
         // externalAPIScope
         props.putString("externalAPIScope", externalAPIScope);
 
+        // inviteController
+        InviteController inviteController = getInviteController();
+
+        if (inviteController != null) {
+            props.putBoolean(
+                "addPeopleEnabled",
+                inviteController.isAddPeopleEnabled());
+            props.putBoolean(
+                "dialOutEnabled",
+                inviteController.isDialOutEnabled());
+        }
+
         // pictureInPictureEnabled
         props.putBoolean(
             "pictureInPictureEnabled",
@@ -468,7 +437,7 @@ public class JitsiMeetView extends FrameLayout {
         if (reactRootView == null) {
             reactRootView = new ReactRootView(getContext());
             reactRootView.startReactApplication(
-                reactInstanceManager,
+                ReactInstanceManagerHolder.getReactInstanceManager(),
                 "App",
                 props);
             reactRootView.setBackgroundColor(BACKGROUND_COLOR);
@@ -496,6 +465,32 @@ public class JitsiMeetView extends FrameLayout {
             urlObject.putString("url", urlString);
         }
         loadURLObject(urlObject);
+    }
+
+    /**
+     * Activity lifecycle method which should be called from
+     * {@code Activity.onUserLeaveHint} so we can do the required internal
+     * processing.
+     *
+     * This is currently not mandatory, but if used will provide automatic
+     * handling of the picture in picture mode when user minimizes the app. It
+     * will be probably the most useful in case the app is using the welcome
+     * page.
+     */
+    public void onUserLeaveHint() {
+        if (getPictureInPictureEnabled() && getURL() != null) {
+            PictureInPictureModule pipModule
+                = ReactInstanceManagerHolder.getNativeModule(
+                        PictureInPictureModule.class);
+
+            if (pipModule != null) {
+                try {
+                    pipModule.enterPictureInPicture();
+                } catch (RuntimeException re) {
+                    Log.e(TAG, "onUserLeaveHint: failed to enter PiP mode", re);
+                }
+            }
+        }
     }
 
     /**
@@ -569,6 +564,19 @@ public class JitsiMeetView extends FrameLayout {
      */
     public void setPictureInPictureEnabled(boolean pictureInPictureEnabled) {
         this.pictureInPictureEnabled = Boolean.valueOf(pictureInPictureEnabled);
+    }
+
+    /**
+     * Sets the URL of the current conference.
+     *
+     * XXX The method is meant for internal purposes only. It does not
+     * {@code loadURL}, it merely remembers the specified URL.
+     *
+     * @param url the URL {@code String} which to be set as the URL of the
+     * current conference.
+     */
+    void setURL(String url) {
+        this.url = url;
     }
 
     /**

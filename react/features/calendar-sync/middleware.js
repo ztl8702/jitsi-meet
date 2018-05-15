@@ -1,175 +1,178 @@
 // @flow
-import Logger from 'jitsi-meet-logger';
+
 import RNCalendarEvents from 'react-native-calendar-events';
 
-import { SET_ROOM } from '../base/conference';
+import { APP_WILL_MOUNT } from '../app';
+import { ADD_KNOWN_DOMAINS, addKnownDomains } from '../base/known-domains';
 import { MiddlewareRegistry } from '../base/redux';
 import { APP_LINK_SCHEME, parseURIString } from '../base/util';
+import { APP_STATE_CHANGED } from '../mobile/background';
 
-import { APP_WILL_MOUNT } from '../app';
+import { setCalendarAuthorization, setCalendarEvents } from './actions';
+import { REFRESH_CALENDAR } from './actionTypes';
+import { CALENDAR_ENABLED } from './constants';
 
-import { maybeAddNewKnownDomain, updateCalendarEntryList } from './actions';
-import { REFRESH_CALENDAR_ENTRY_LIST } from './actionTypes';
+const logger = require('jitsi-meet-logger').getLogger(__filename);
 
+/**
+ * The number of days to fetch.
+ */
 const FETCH_END_DAYS = 10;
+
+/**
+ * The number of days to go back when fetching.
+ */
 const FETCH_START_DAYS = -1;
+
+/**
+ * The max number of events to fetch from the calendar.
+ */
 const MAX_LIST_LENGTH = 10;
-const logger = Logger.getLogger(__filename);
 
-MiddlewareRegistry.register(store => next => action => {
-    const result = next(action);
+CALENDAR_ENABLED
+    && MiddlewareRegistry.register(store => next => action => {
+        switch (action.type) {
+        case ADD_KNOWN_DOMAINS: {
+            // XXX Fetch new calendar entries only when an actual domain has
+            // become known.
+            const { getState } = store;
+            const oldValue = getState()['features/base/known-domains'];
+            const result = next(action);
+            const newValue = getState()['features/base/known-domains'];
 
-    switch (action.type) {
-    case APP_WILL_MOUNT:
-        _ensureDefaultServer(store);
-        _fetchCalendarEntries(store, false);
-        break;
-    case REFRESH_CALENDAR_ENTRY_LIST:
-        _fetchCalendarEntries(store, true);
-        break;
-    case SET_ROOM:
-        _parseAndAddDomain(store);
-    }
+            oldValue === newValue || _fetchCalendarEntries(store, false, false);
 
-    return result;
-});
+            return result;
+        }
+
+        case APP_STATE_CHANGED: {
+            const result = next(action);
+
+            _maybeClearAccessStatus(store, action);
+
+            return result;
+        }
+
+        case APP_WILL_MOUNT: {
+            // For legacy purposes, we've allowed the deserialization of
+            // knownDomains and now we're to translate it to base/known-domains.
+            const state = store.getState()['features/calendar-sync'];
+
+            if (state) {
+                const { knownDomains } = state;
+
+                Array.isArray(knownDomains)
+                    && knownDomains.length
+                    && store.dispatch(addKnownDomains(knownDomains));
+            }
+
+            const result = next(action);
+
+            _fetchCalendarEntries(store, false, false);
+
+            return result;
+        }
+
+        case REFRESH_CALENDAR: {
+            const result = next(action);
+
+            _fetchCalendarEntries(store, true, action.forcePermission);
+
+            return result;
+        }
+        }
+
+        return next(action);
+    });
 
 /**
  * Ensures calendar access if possible and resolves the promise if it's granted.
  *
- * @private
  * @param {boolean} promptForPermission - Flag to tell the app if it should
  * prompt for a calendar permission if it wasn't granted yet.
+ * @param {Function} dispatch - The Redux dispatch function.
+ * @private
  * @returns {Promise}
  */
-function _ensureCalendarAccess(promptForPermission) {
+function _ensureCalendarAccess(promptForPermission, dispatch) {
     return new Promise((resolve, reject) => {
         RNCalendarEvents.authorizationStatus()
             .then(status => {
                 if (status === 'authorized') {
-                    resolve();
+                    resolve(true);
                 } else if (promptForPermission) {
                     RNCalendarEvents.authorizeEventStore()
                         .then(result => {
-                            if (result === 'authorized') {
-                                resolve();
-                            } else {
-                                reject(result);
-                            }
+                            dispatch(setCalendarAuthorization(result));
+                            resolve(result === 'authorized');
                         })
-                        .catch(error => {
-                            reject(error);
-                        });
+                        .catch(reject);
                 } else {
-                    reject(status);
+                    resolve(false);
                 }
             })
-            .catch(error => {
-                reject(error);
-            });
+            .catch(reject);
     });
-}
-
-/**
- * Ensures presence of the default server in the known domains list.
- *
- * @private
- * @param {Object} store - The redux store.
- * @returns {Promise}
- */
-function _ensureDefaultServer(store) {
-    const state = store.getState();
-    const defaultURL = parseURIString(
-        state['features/app'].app._getDefaultURL()
-    );
-
-    store.dispatch(maybeAddNewKnownDomain(defaultURL.host));
 }
 
 /**
  * Reads the user's calendar and updates the stored entries if need be.
  *
- * @private
  * @param {Object} store - The redux store.
- * @param {boolean} promptForPermission - Flag to tell the app if it should
+ * @param {boolean} maybePromptForPermission - Flag to tell the app if it should
  * prompt for a calendar permission if it wasn't granted yet.
+ * @param {boolean|undefined} forcePermission - Whether to force to re-ask for
+ * the permission or not.
+ * @private
  * @returns {void}
  */
-function _fetchCalendarEntries(store, promptForPermission) {
-    _ensureCalendarAccess(promptForPermission)
-    .then(() => {
-        const startDate = new Date();
-        const endDate = new Date();
+function _fetchCalendarEntries(
+        store,
+        maybePromptForPermission,
+        forcePermission) {
+    const { dispatch, getState } = store;
+    const promptForPermission
+        = (maybePromptForPermission
+                && !getState()['features/calendar-sync'].authorization)
+            || forcePermission;
 
-        startDate.setDate(startDate.getDate() + FETCH_START_DAYS);
-        endDate.setDate(endDate.getDate() + FETCH_END_DAYS);
+    _ensureCalendarAccess(promptForPermission, dispatch)
+        .then(accessGranted => {
+            if (accessGranted) {
+                const startDate = new Date();
+                const endDate = new Date();
 
-        RNCalendarEvents.fetchAllEvents(
-            startDate.getTime(),
-            endDate.getTime(),
-            []
-        )
-        .then(events => {
-            const { knownDomains } = store.getState()['features/calendar-sync'];
-            const eventList = [];
+                startDate.setDate(startDate.getDate() + FETCH_START_DAYS);
+                endDate.setDate(endDate.getDate() + FETCH_END_DAYS);
 
-            if (events && events.length) {
-                for (const event of events) {
-                    const jitsiURL = _getURLFromEvent(event, knownDomains);
-                    const now = Date.now();
-
-                    if (jitsiURL) {
-                        const eventStartDate = Date.parse(event.startDate);
-                        const eventEndDate = Date.parse(event.endDate);
-
-                        if (isNaN(eventStartDate) || isNaN(eventEndDate)) {
-                            logger.warn(
-                                'Skipping calendar event due to invalid dates',
-                                event.title,
-                                event.startDate,
-                                event.endDate
-                            );
-                        } else if (eventEndDate > now) {
-                            eventList.push({
-                                endDate: eventEndDate,
-                                id: event.id,
-                                startDate: eventStartDate,
-                                title: event.title,
-                                url: jitsiURL
-                            });
-                        }
-                    }
-                }
+                RNCalendarEvents.fetchAllEvents(
+                        startDate.getTime(),
+                        endDate.getTime(),
+                        [])
+                    .then(_updateCalendarEntries.bind(store))
+                    .catch(error =>
+                        logger.error('Error fetching calendar.', error));
+            } else {
+                logger.warn('Calendar access not granted.');
             }
-
-            store.dispatch(updateCalendarEntryList(eventList.sort((a, b) =>
-                a.startDate - b.startDate
-            ).slice(0, MAX_LIST_LENGTH)));
         })
-        .catch(error => {
-            logger.error('Error fetching calendar.', error);
-        });
-    })
-    .catch(reason => {
-        logger.error('Error accessing calendar.', reason);
-    });
+        .catch(reason => logger.error('Error accessing calendar.', reason));
 }
 
 /**
- * Retreives a jitsi URL from an event if present.
+ * Retrieves a Jitsi Meet URL from an event if present.
  *
- * @private
  * @param {Object} event - The event to parse.
  * @param {Array<string>} knownDomains - The known domain names.
+ * @private
  * @returns {string}
- *
  */
 function _getURLFromEvent(event, knownDomains) {
     const linkTerminatorPattern = '[^\\s<>$]';
-    /* eslint-disable max-len */
     const urlRegExp
-        = new RegExp(`http(s)?://(${knownDomains.join('|')})/${linkTerminatorPattern}+`, 'gi');
-    /* eslint-enable max-len */
+        = new RegExp(
+            `http(s)?://(${knownDomains.join('|')})/${linkTerminatorPattern}+`,
+            'gi');
     const schemeRegExp
         = new RegExp(`${APP_LINK_SCHEME}${linkTerminatorPattern}+`, 'gi');
     const fieldsToSearch = [
@@ -179,16 +182,17 @@ function _getURLFromEvent(event, knownDomains) {
         event.notes,
         event.description
     ];
-    let matchArray;
 
     for (const field of fieldsToSearch) {
         if (typeof field === 'string') {
-            if (
-                (matchArray
-                    = urlRegExp.exec(field) || schemeRegExp.exec(field))
-                        !== null
-            ) {
-                return matchArray[0];
+            const matches = urlRegExp.exec(field) || schemeRegExp.exec(field);
+
+            if (matches) {
+                const url = parseURIString(matches[0]);
+
+                if (url) {
+                    return url.toString();
+                }
             }
         }
     }
@@ -197,15 +201,90 @@ function _getURLFromEvent(event, knownDomains) {
 }
 
 /**
- * Retreives the domain name of a room upon join and stores it
- * in the known domain list, if not present yet.
+ * Clears the calendar access status when the app comes back from the
+ * background. This is needed as some users may never quit the app, but puts it
+ * into the background and we need to try to request for a permission as often
+ * as possible, but not annoyingly often.
  *
- * @private
  * @param {Object} store - The redux store.
- * @returns {Promise}
+ * @param {Object} action - The Redux action.
+ * @private
+ * @returns {void}
  */
-function _parseAndAddDomain(store) {
-    const { locationURL } = store.getState()['features/base/connection'];
+function _maybeClearAccessStatus(store, { appState }) {
+    appState === 'background'
+        && store.dispatch(setCalendarAuthorization(undefined));
+}
 
-    store.dispatch(maybeAddNewKnownDomain(locationURL.host));
+/**
+ * Updates the calendar entries in Redux when new list is received.
+ *
+ * @param {Object} event - An event returned from the native calendar.
+ * @param {Array<string>} knownDomains - The known domain list.
+ * @private
+ * @returns {CalendarEntry}
+ */
+function _parseCalendarEntry(event, knownDomains) {
+    if (event) {
+        const url = _getURLFromEvent(event, knownDomains);
+
+        if (url) {
+            const startDate = Date.parse(event.startDate);
+            const endDate = Date.parse(event.endDate);
+
+            if (isNaN(startDate) || isNaN(endDate)) {
+                logger.warn(
+                    'Skipping invalid calendar event',
+                    event.title,
+                    event.startDate,
+                    event.endDate
+                );
+            } else {
+                return {
+                    endDate,
+                    id: event.id,
+                    startDate,
+                    title: event.title,
+                    url
+                };
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Updates the calendar entries in redux when new list is received.
+ *
+ * XXX The function's {@code this} is the redux store.
+ *
+ * @param {Array<CalendarEntry>} events - The new event list.
+ * @private
+ * @returns {void}
+ */
+function _updateCalendarEntries(events) {
+    if (events && events.length) {
+        // eslint-disable-next-line no-invalid-this
+        const { dispatch, getState } = this;
+
+        const knownDomains = getState()['features/base/known-domains'];
+        const eventList = [];
+
+        const now = Date.now();
+
+        for (const event of events) {
+            const calendarEntry = _parseCalendarEntry(event, knownDomains);
+
+            calendarEntry
+                && calendarEntry.endDate > now
+                && eventList.push(calendarEntry);
+        }
+
+        dispatch(
+            setCalendarEvents(
+                eventList
+                    .sort((a, b) => a.startDate - b.startDate)
+                    .slice(0, MAX_LIST_LENGTH)));
+    }
 }

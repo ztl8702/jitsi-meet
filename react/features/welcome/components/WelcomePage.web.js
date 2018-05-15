@@ -1,4 +1,4 @@
-/* global APP, config, interfaceConfig, JitsiMeetJS */
+/* global interfaceConfig */
 
 import Button from '@atlaskit/button';
 import { FieldTextStateless } from '@atlaskit/field-text';
@@ -6,10 +6,8 @@ import { AtlasKitThemeProvider } from '@atlaskit/theme';
 import React from 'react';
 import { connect } from 'react-redux';
 
-import { initAnalytics } from '../../analytics';
 import { translate } from '../../base/i18n';
-import { isAnalyticsEnabled } from '../../base/lib-jitsi-meet';
-import { Watermarks } from '../../base/react';
+import { HideNotificationBarStyle, Watermarks } from '../../base/react';
 
 import { AbstractWelcomePage, _mapStateToProps } from './AbstractWelcomePage';
 
@@ -55,6 +53,7 @@ class WelcomePage extends AbstractWelcomePage {
             'welcome-page-additional-content-template');
 
         // Bind event handlers so they are only bound once per instance.
+        this._onFormSubmit = this._onFormSubmit.bind(this);
         this._onRoomChange = this._onRoomChange.bind(this);
         this._setAdditionalContentRef
             = this._setAdditionalContentRef.bind(this);
@@ -68,16 +67,7 @@ class WelcomePage extends AbstractWelcomePage {
      * @returns {void}
      */
     componentDidMount() {
-        // FIXME: This is not the best place for this logic. Ideally we should
-        // use features/base/lib-jitsi-meet#initLib() action for this use case.
-        // But currently lib-jitsi-meet#initLib()'s logic works for mobile only
-        // (on web it ends up with infinite loop over initLib).
-        JitsiMeetJS.init({
-            enableAnalyticsLogging: isAnalyticsEnabled(APP.store),
-            ...config
-        }).then(() => {
-            initAnalytics(APP.store);
-        });
+        document.body.classList.add('welcome-page');
 
         if (this.state.generateRoomnames) {
             this._updateRoomname();
@@ -87,6 +77,18 @@ class WelcomePage extends AbstractWelcomePage {
             this._additionalContentRef.appendChild(
                 this._additionalContentTemplate.content.cloneNode(true));
         }
+    }
+
+    /**
+     * Removes the classname used for custom styling of the welcome page.
+     *
+     * @inheritdoc
+     * @returns {void}
+     */
+    componentWillUnmount() {
+        super.componentWillUnmount();
+
+        document.body.classList.remove('welcome-page');
     }
 
     /**
@@ -121,7 +123,7 @@ class WelcomePage extends AbstractWelcomePage {
                         <div id = 'new_enter_room'>
                             <form
                                 className = 'enter-room-input'
-                                onSubmit = { this._onJoin }>
+                                onSubmit = { this._onFormSubmit }>
                                 <FieldTextStateless
                                     autoFocus = { true }
                                     id = 'enter_room_field'
@@ -149,8 +151,22 @@ class WelcomePage extends AbstractWelcomePage {
                             ref = { this._setAdditionalContentRef } />
                         : null }
                 </div>
+                <HideNotificationBarStyle />
             </AtlasKitThemeProvider>
         );
+    }
+
+    /**
+     * Prevents submission of the form and delagates join logic.
+     *
+     * @param {Event} event - The HTML Event which details the form submission.
+     * @private
+     * @returns {void}
+     */
+    _onFormSubmit(event) {
+        event.preventDefault();
+
+        this._onJoin();
     }
 
     /**

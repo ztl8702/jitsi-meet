@@ -8,8 +8,8 @@ const AVATAR_OPACITY = 0.4;
 const AVATAR_SIZE = 65;
 const HEADER_COLOR = ColorPalette.blue;
 
-// Header height is from iOS guidelines. Also, this looks good.
-const HEADER_HEIGHT = 44;
+// Header height is from Android guidelines. Also, this looks good.
+const HEADER_HEIGHT = 56;
 const OVERLAY_FONT_COLOR = 'rgba(255, 255, 255, 0.6)';
 
 export const HEADER_PADDING = BoxModel.padding;
@@ -68,6 +68,77 @@ const HEADER_STYLES = {
         height: HEADER_HEIGHT,
         justifyContent: 'flex-start',
         padding: HEADER_PADDING
+    }
+};
+
+/**
+ * Style classes of the PagedList-based components.
+ */
+const PAGED_LIST_STYLES = {
+
+    /**
+     * Style of the page indicator (Android).
+     */
+    pageIndicator: {
+        alignItems: 'center',
+        flex: 1,
+        flexDirection: 'column',
+        justifyContent: 'center'
+    },
+
+    /**
+     * Additional style for the active indicator icon (Android).
+     */
+    pageIndicatorActive: {
+        color: ColorPalette.white
+    },
+
+    /**
+     * Container for the page indicators (Android).
+     */
+    pageIndicatorContainer: {
+        alignItems: 'stretch',
+        backgroundColor: ColorPalette.blue,
+        flexDirection: 'row',
+        height: 56,
+        justifyContent: 'center'
+    },
+
+    /**
+     * Icon of the page indicator (Android).
+     */
+    pageIndicatorIcon: {
+        color: ColorPalette.blueHighlight,
+        fontSize: 24
+    },
+
+    /**
+     * Label of the page indicator (Android).
+     */
+    pageIndicatorText: {
+        color: ColorPalette.blueHighlight
+    },
+
+    /**
+     * Top level style of the paged list.
+     */
+    pagedList: {
+        flex: 1
+    },
+
+    /**
+     * The paged list container View.
+     */
+    pagedListContainer: {
+        flex: 1,
+        flexDirection: 'column'
+    },
+
+    /**
+     * Disabled style for the container.
+     */
+    pagedListContainerDisabled: {
+        opacity: 0.2
     }
 };
 
@@ -180,6 +251,25 @@ const SECTION_LIST_STYLES = {
         fontWeight: 'normal'
     },
 
+    pullToRefresh: {
+        alignItems: 'center',
+        flex: 1,
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: 20
+    },
+
+    pullToRefreshIcon: {
+        backgroundColor: 'transparent',
+        color: OVERLAY_FONT_COLOR,
+        fontSize: 20
+    },
+
+    pullToRefreshText: {
+        backgroundColor: 'transparent',
+        color: OVERLAY_FONT_COLOR
+    },
+
     touchableView: {
         flexDirection: 'row'
     }
@@ -229,6 +319,7 @@ const SIDEBAR_STYLES = {
  */
 export default createStyleSheet({
     ...HEADER_STYLES,
+    ...PAGED_LIST_STYLES,
     ...SECTION_LIST_STYLES,
     ...SIDEBAR_STYLES
 });
