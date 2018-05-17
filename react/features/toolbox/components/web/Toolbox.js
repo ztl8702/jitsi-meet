@@ -36,6 +36,7 @@ import {
     StopRecordingDialog,
     getActiveSession
 } from '../../../recording';
+import { toggleRecording as toggleLocalRecording } from '../../local-recording';
 import { SettingsButton } from '../../../settings';
 import { toggleSharedVideo } from '../../../shared-video';
 import { toggleChat, toggleProfile } from '../../../side-panel';
@@ -256,6 +257,8 @@ class Toolbox extends Component<Props> {
             = this._onToolbarToggleScreenshare.bind(this);
         this._onToolbarToggleSharedVideo
             = this._onToolbarToggleSharedVideo.bind(this);
+        this._onToolbarToggleLocalRecording
+            = this._onToolbarToggleLocalRecording.bind(this);
     }
 
     /**
@@ -392,6 +395,10 @@ class Toolbox extends Component<Props> {
                         visible = { this._shouldShowButton('camera') } />
                 </div>
                 <div className = 'button-group-right'>
+                    <ToolbarButton
+                        iconName = 'icon-rec'
+                        onClick = { this._onToolbarToggleLocalRecording }
+                        tooltip = { 'Local recording' } />
                     { this._shouldShowButton('invite')
                         && !_hideInviteButton
                         && <ToolbarButton
@@ -929,6 +936,18 @@ class Toolbox extends Component<Props> {
             }));
 
         this._doToggleSharedVideo();
+    }
+
+    _onToolbarToggleLocalRecording: () => void;
+
+    /**
+     * Switches local recording on or off.
+     *
+     * @private
+     * @returns {void}
+     */
+    _onToolbarToggleLocalRecording() {
+        this.props.dispatch(toggleLocalRecording());
     }
 
     /**
