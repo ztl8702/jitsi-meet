@@ -35,7 +35,7 @@ import {
     StopLiveStreamDialog,
     getActiveSession
 } from '../../../recording';
-import { toggleRecording as toggleLocalRecording } from '../../local-recording';
+import { toggleRecording as toggleLocalRecording, LocalRecordingButton } from '../../local-recording';
 import { SettingsButton } from '../../../settings';
 import { toggleSharedVideo } from '../../../shared-video';
 import { toggleChat } from '../../../side-panel';
@@ -165,6 +165,8 @@ type Props = {
      * Flag showing whether toolbar is visible.
      */
     _visible: boolean,
+
+    _localRecState: any,
 
     /**
      * Set with the buttons which this Toolbox should display.
@@ -319,6 +321,8 @@ class Toolbox extends Component<Props> {
      * @returns {ReactElement}
      */
     render() {
+        console.log("toolbox state",this.state);
+        console.log("toolbox props",this.props);
         const {
             _chatOpen,
             _hideInviteButton,
@@ -375,10 +379,9 @@ class Toolbox extends Component<Props> {
                         visible = { this._shouldShowButton('camera') } />
                 </div>
                 <div className = 'button-group-right'>
-                    <ToolbarButton
-                        iconName = 'icon-rec'
-                        onClick = { this._onToolbarToggleLocalRecording }
-                        tooltip = { 'Local recording' } />
+                    <LocalRecordingButton
+                        isOn = { this.props._localRecState.on }
+                        onClick = { this._onToolbarToggleLocalRecording } />
                     { this._shouldShowButton('invite')
                         && !_hideInviteButton
                         && <ToolbarButton
@@ -1115,6 +1118,7 @@ function _mapStateToProps(state) {
     const localVideo = getLocalVideoTrack(state['features/base/tracks']);
     const addPeopleEnabled = isAddPeopleEnabled(state);
     const dialOutEnabled = isDialOutEnabled(state);
+    const localRecordingStates = state['features/local-recording'];
 
     let desktopSharingDisabledTooltipKey;
     let liveStreamingDisabledTooltipKey;
@@ -1179,6 +1183,7 @@ function _mapStateToProps(state) {
              getActiveSession(state, JitsiRecordingConstants.mode.STREAM),
         _localParticipantID: localParticipant.id,
         _overflowMenuVisible: overflowMenuVisible,
+        _localRecState: localRecordingStates,
         _raisedHand: localParticipant.raisedHand,
         _screensharing: localVideo && localVideo.videoType === 'desktop',
         _sharingVideo: sharedVideoStatus === 'playing'

@@ -167,7 +167,7 @@ module.exports = [
                 './connection_optimization/do_external_connect.js',
 
             'flacEncodeWorker':
-                './react/features/local-recording/flacEncodeWorker.js'
+                './react/features/local-recording/recording/flac/flacEncodeWorker.js'
         }
     }),
 

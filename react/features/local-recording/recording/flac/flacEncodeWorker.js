@@ -1,10 +1,10 @@
 /**
  * WebWorker that does FLAC encoding using libflac.js
+ *
+ * This file does not go through webpack.
  */
-declare var Flac: any;
-declare var importScripts: Function;
 
-importScripts('libflac3-1.3.2.min.js');
+importScripts('/libs/libflac3-1.3.2.min.js');
 
 
 const FLAC_ERRORS = {
@@ -48,11 +48,14 @@ function mergeUint8Arrays(arrays, totalLength) {
     const result = new Uint8Array(totalLength);
     let offset = 0;
     const len = arrays.length;
-    for (let i = 0; i < len; i++){
-        const buffer = channelBuffer[i];
+
+    for (let i = 0; i < len; i++) {
+        const buffer = arrays[i];
+
         result.set(buffer, offset);
         offset += buffer.length;
     }
+
     return result;
 }
 
@@ -112,7 +115,7 @@ class Encoder {
         this._bufferSize = bufferSize;
 
         // create the encoder
-        this._encoderId = Flac.create_libflac_encoder(
+        this._encoderId = Flac.init_libflac_encoder(
             this._sampleRate,
             1, // Mono channel
             this._bitDepth,
@@ -127,7 +130,11 @@ class Encoder {
         }
 
         // initialise the encoder
-        const initResult = Flac.init_encoder_stream(this._encoderId, this._onEncodedData, this._onMetadataAvailable);
+        const initResult = Flac.init_encoder_stream(
+            this._encoderId,
+            this._onEncodedData.bind(this),
+            this._onMetadataAvailable.bind(this)
+        );
 
         if (initResult !== 0) {
             throw new Error('Failed to initalise libflac encoder.');
