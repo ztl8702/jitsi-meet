@@ -1,5 +1,6 @@
 import {
-    LOCAL_RECORDING_TOGGLE
+    LOCAL_RECORDING_TOGGLE,
+    CLOCK_TICK
 } from './actionTypes';
 
 /**
@@ -14,3 +15,10 @@ export function toggleRecording() {
         type: LOCAL_RECORDING_TOGGLE
     };
 }
+
+export function clockTick() {
+    return {
+        type: CLOCK_TICK
+    };
+}
+

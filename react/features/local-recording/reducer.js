@@ -1,9 +1,9 @@
 import { ReducerRegistry } from '../base/redux';
 
 import {
-    LOCAL_RECORDING_TOGGLE
+    LOCAL_RECORDING_TOGGLE, CLOCK_TICK
 } from './actionTypes';
-import { RecordingController } from './RecordingController';
+import { RecordingController } from './recording';
 
 
 ReducerRegistry.register('features/local-recording', (state = {}, action) => {
@@ -15,15 +15,30 @@ ReducerRegistry.register('features/local-recording', (state = {}, action) => {
 
         if (newOnOffState) {
             startRecording();
+
+            return {
+                ...state,
+                on: newOnOffState,
+                recordingStartedAt: new Date(Date.now()),
+                encodingFormat: 'flac'
+            };
         } else {
             stopRecording();
+
+            return {
+                ...state,
+                on: newOnOffState,
+                recordingStartedAt: null
+            };
         }
 
+        
+    }
+    case CLOCK_TICK:
         return {
             ...state,
-            on: newOnOffState
+            currentTime: new Date(Date.now())
         };
-    }
     default:
         return state;
     }
