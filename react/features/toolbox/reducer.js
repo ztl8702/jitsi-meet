@@ -1,10 +1,11 @@
 // @flow
 
-import { ReducerRegistry } from '../base/redux';
+import { ReducerRegistry, set } from '../base/redux';
 
 import {
     CLEAR_TOOLBOX_TIMEOUT,
     FULL_SCREEN_CHANGED,
+    SET_OVERFLOW_MENU_VISIBLE,
     SET_TOOLBAR_HOVERED,
     SET_TOOLBOX_ALWAYS_VISIBLE,
     SET_TOOLBOX_ENABLED,
@@ -23,32 +24,47 @@ declare var interfaceConfig: Object;
  *     alwaysVisible: boolean,
  *     enabled: boolean,
  *     hovered: boolean,
+ *     overflowMenuVisible: boolean,
  *     timeoutID: number,
  *     timeoutMS: number,
  *     visible: boolean
  * }}
  */
 function _getInitialState() {
+    // Does the toolbar eventually fade out, or is it always visible?
+    let alwaysVisible = false;
+
+    // Toolbar (initial) visibility.
+    let visible = false;
+
     // Default toolbox timeout for mobile app.
     let timeoutMS = 5000;
 
-    if (typeof interfaceConfig !== 'undefined'
-            && interfaceConfig.INITIAL_TOOLBAR_TIMEOUT) {
-        timeoutMS = interfaceConfig.INITIAL_TOOLBAR_TIMEOUT;
+    if (typeof interfaceConfig !== 'undefined') {
+        if (interfaceConfig.INITIAL_TOOLBAR_TIMEOUT) {
+            timeoutMS = interfaceConfig.INITIAL_TOOLBAR_TIMEOUT;
+        }
+        if (typeof interfaceConfig.TOOLBAR_ALWAYS_VISIBLE !== 'undefined') {
+            alwaysVisible = interfaceConfig.TOOLBAR_ALWAYS_VISIBLE;
+        }
+    }
+
+    // When the toolbar is always visible, it must initially be visible too.
+    if (alwaysVisible === true) {
+        visible = true;
     }
 
     return {
         /**
          * The indicator which determines whether the Toolbox should always be
-         * visible.
+         * visible. When false, the toolbar will fade out after timeoutMS.
          *
          * @type {boolean}
          */
-        alwaysVisible: false,
+        alwaysVisible,
 
         /**
-         * The indicator which determines whether the Toolbox is enabled. For
-         * example, modules/UI/recording/Recording.js disables the Toolbox.
+         * The indicator which determines whether the Toolbox is enabled.
          *
          * @type {boolean}
          */
@@ -61,6 +77,13 @@ function _getInitialState() {
          * @type {boolean}
          */
         hovered: false,
+
+        /**
+         * The indicator which determines whether the OverflowMenu is visible.
+         *
+         * @type {boolean}
+         */
+        overflowMenuVisible: false,
 
         /**
          * A number, non-zero value which identifies the timer created by a call
@@ -83,7 +106,7 @@ function _getInitialState() {
          *
          * @type {boolean}
          */
-        visible: false
+        visible
     };
 }
 
@@ -103,6 +126,12 @@ ReducerRegistry.register(
                 fullScreen: action.fullScreen
             };
 
+        case SET_OVERFLOW_MENU_VISIBLE:
+            return {
+                ...state,
+                overflowMenuVisible: action.visible
+            };
+
         case SET_TOOLBAR_HOVERED:
             return {
                 ...state,
@@ -112,7 +141,8 @@ ReducerRegistry.register(
         case SET_TOOLBOX_ALWAYS_VISIBLE:
             return {
                 ...state,
-                alwaysVisible: action.alwaysVisible
+                alwaysVisible: action.alwaysVisible,
+                visible: action.alwaysVisible === true ? true : state.visible
             };
 
         case SET_TOOLBOX_ENABLED:
@@ -135,10 +165,7 @@ ReducerRegistry.register(
             };
 
         case SET_TOOLBOX_VISIBLE:
-            return {
-                ...state,
-                visible: action.visible
-            };
+            return set(state, 'visible', action.visible);
         }
 
         return state;

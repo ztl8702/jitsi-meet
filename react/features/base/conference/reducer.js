@@ -38,13 +38,11 @@ ReducerRegistry.register('features/base/conference', (state = {}, action) => {
         return _conferenceJoined(state, action);
 
     case CONFERENCE_LEFT:
-        return _conferenceLeft(state, action);
+    case CONFERENCE_WILL_LEAVE:
+        return _conferenceLeftOrWillLeave(state, action);
 
     case CONFERENCE_WILL_JOIN:
         return _conferenceWillJoin(state, action);
-
-    case CONFERENCE_WILL_LEAVE:
-        return _conferenceWillLeave(state, action);
 
     case CONNECTION_WILL_CONNECT:
         return set(state, 'authRequired', undefined);
@@ -62,10 +60,7 @@ ReducerRegistry.register('features/base/conference', (state = {}, action) => {
         return _setDesktopSharingEnabled(state, action);
 
     case SET_FOLLOW_ME:
-        return {
-            ...state,
-            followMeEnabled: action.enabled
-        };
+        return set(state, 'followMeEnabled', action.enabled);
 
     case SET_PASSWORD:
         return _setPassword(state, action);
@@ -197,41 +192,55 @@ function _conferenceJoined(state, { conference }) {
 }
 
 /**
- * Reduces a specific Redux action CONFERENCE_LEFT of the feature
- * base/conference.
+ * Reduces a specific redux action {@link CONFERENCE_LEFT} or
+ * {@link CONFERENCE_WILL_LEAVE} for the feature base/conference.
  *
- * @param {Object} state - The Redux state of the feature base/conference.
- * @param {Action} action - The Redux action CONFERENCE_LEFT to reduce.
+ * @param {Object} state - The redux state of the feature base/conference.
+ * @param {Action} action - The redux action {@code CONFERENCE_LEFT} or
+ * {@code CONFERENCE_WILL_LEAVE} to reduce.
  * @private
- * @returns {Object} The new state of the feature base/conference after the
+ * @returns {Object} The next/new state of the feature base/conference after the
  * reduction of the specified action.
  */
-function _conferenceLeft(state, { conference }) {
-    let nextState = state;
+function _conferenceLeftOrWillLeave(state, { conference, type }) {
+    const nextState = { ...state };
 
-    if (state.authRequired === conference) {
-        nextState = set(nextState, 'authRequired', undefined);
-    }
-    if (state.conference === conference) {
-        nextState = assign(nextState, {
-            conference: undefined,
-            joining: undefined,
-            leaving: undefined,
+    // The redux action CONFERENCE_LEFT is the last time that we should be
+    // hearing from a JitsiConference instance.
+    //
+    // The redux action CONFERENCE_WILL_LEAVE represents the order of the user
+    // to leave a JitsiConference instance. From the user's perspective, there's
+    // no going back (with respect to the instance itself). The app will perform
+    // due clean-up like leaving the associated room, but the instance is no
+    // longer the focus of the attention of the user and, consequently, the app.
+    for (const p in state) {
+        if (state[p] === conference) {
+            nextState[p] = undefined;
 
-            // XXX Clear/unset locked & password here for a conference which has
-            // been LOCKED_LOCALLY.
-            locked: undefined,
-            password: undefined
-        });
+            switch (p) {
+            case 'conference':
+            case 'passwordRequired':
+                // XXX Clear/unset locked & password for a conference which has
+                // been LOCKED_LOCALLY or LOCKED_REMOTELY.
+                delete nextState.locked;
+                delete nextState.password;
+                break;
+            }
+        }
     }
-    if (state.passwordRequired === conference) {
-        nextState = assign(nextState, {
-            // XXX Clear/unset locked & password here for a conference which has
-            // been LOCKED_REMOTELY.
-            locked: undefined,
-            password: undefined,
-            passwordRequired: undefined
-        });
+
+    if (type === CONFERENCE_WILL_LEAVE) {
+        // A CONFERENCE_WILL_LEAVE is of further consequence only if it is
+        // expected i.e. if the specified conference is joining or joined.
+        if (conference === state.joining || conference === state.conference) {
+            /**
+             * The JitsiConference instance which is currently in the process of
+             * being left.
+             *
+             * @type {JitsiConference}
+             */
+            nextState.leaving = conference;
+        }
     }
 
     return nextState;
@@ -251,36 +260,6 @@ function _conferenceWillJoin(state, { conference }) {
     return assign(state, {
         error: undefined,
         joining: conference
-    });
-}
-
-/**
- * Reduces a specific Redux action CONFERENCE_WILL_LEAVE of the feature
- * base/conference.
- *
- * @param {Object} state - The Redux state of the feature base/conference.
- * @param {Action} action - The Redux action CONFERENCE_WILL_LEAVE to reduce.
- * @private
- * @returns {Object} The new state of the feature base/conference after the
- * reduction of the specified action.
- */
-function _conferenceWillLeave(state, { conference }) {
-    if (state.conference !== conference) {
-        return state;
-    }
-
-    return assign(state, {
-        authRequired: undefined,
-        joining: undefined,
-
-        /**
-         * The JitsiConference instance which is currently in the process of
-         * being left.
-         *
-         * @type {JitsiConference}
-         */
-        leaving: conference,
-        passwordRequired: undefined
     });
 }
 
@@ -362,6 +341,20 @@ function _setPassword(state, { conference, method, password }) {
     case conference.join:
         if (state.passwordRequired === conference) {
             return assign(state, {
+                // XXX 1. The JitsiConference which transitions away from
+                // passwordRequired MUST remain in the redux state
+                // features/base/conference until it transitions into
+                // conference; otherwise, there is a span of time during which
+                // the redux state does not even know that there is a
+                // JitsiConference whatsoever.
+                //
+                // 2. The redux action setPassword will attempt to join the
+                // JitsiConference so joining is an appropriate transitional
+                // redux state.
+                //
+                // 3. The redux action setPassword will perform the same check
+                // before it proceeds with the re-join.
+                joining: state.conference ? state.joining : conference,
                 locked: LOCKED_REMOTELY,
 
                 /**

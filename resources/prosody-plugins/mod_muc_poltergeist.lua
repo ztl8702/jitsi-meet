@@ -9,6 +9,7 @@ local wrap_async_run = module:require "util".wrap_async_run;
 local update_presence_identity = module:require "util".update_presence_identity;
 local timer = require "util.timer";
 local MUC_NS = "http://jabber.org/protocol/muc";
+local expired_status  = "expired";
 
 -- Options
 local poltergeist_component
@@ -35,10 +36,6 @@ local token_util = module:require "token/util".new(parentCtx);
 -- option to enable/disable token verifications
 local disableTokenVerification
     = module:get_option_boolean("disable_polergeist_token_verification", false);
-
--- option to expire poltergeist with custom status text
-local poltergeistExpiredStatus
-    = module:get_option_string("poltergeist_expired_status");
 
 -- table to store all poltergeists we create
 local poltergeists = {};
@@ -109,6 +106,27 @@ function remove_username(room, nick)
             poltergeists[room_name][user_id_to_remove] = nil;
         end
     end
+end
+
+-- Provides a new presence stanza for a poltergeist.
+-- @param room the room instance
+-- @param nick the user nick
+function generate_poltergeist_presence(room, nick, status)
+    local presence_stanza = st.presence({
+        to = room.jid.."/"..nick,
+        from = poltergeist_component.."/"..nick,
+    }):tag("x", { xmlns = MUC_NS }):up();
+
+    presence_stanza:tag("call_cancel"):text(nil):up();
+    presence_stanza:tag("call_id"):text(nil):up();
+
+    if status then
+       presence_stanza:tag("status"):text(status):up();
+    else
+       presence_stanza:tag("status"):text(nil):up();
+    end
+
+    return presence_stanza;
 end
 
 --- Verifies room name, domain name with the values in the token
@@ -185,7 +203,7 @@ prosody.events.add_handler("pre-jitsi-authentication", function(session)
         if (have_poltergeist_occupant(room, nick)) then
             -- notify that user connected using the poltergeist
             update_poltergeist_occupant_status(
-                room, nick, "connected");
+			   room, nick, "connected");
             remove_poltergeist_occupant(room, nick, true);
         end
 
@@ -205,10 +223,7 @@ end);
 function create_poltergeist_occupant(room, nick, name, avatar, status, context)
     log("debug", "create_poltergeist_occupant %s", nick);
     -- Join poltergeist occupant to room, with the invited JID as their nick
-    local join_presence = st.presence({
-        to = room.jid.."/"..nick,
-        from = poltergeist_component.."/"..nick
-    }):tag("x", { xmlns = MUC_NS }):up();
+    local join_presence = generate_poltergeist_presence(room, nick, status)
 
     if (name) then
         join_presence:tag(
@@ -218,9 +233,6 @@ function create_poltergeist_occupant(room, nick, name, avatar, status, context)
     if (avatar) then
         join_presence:tag("avatar-url"):text(avatar):up();
     end
-    if (status) then
-        join_presence:tag("status"):text(status):up();
-    end
 
     -- If the room has a password set, let the poltergeist enter using it
     local room_password = room:get_password();
@@ -228,6 +240,15 @@ function create_poltergeist_occupant(room, nick, name, avatar, status, context)
         local join = join_presence:get_child("x", MUC_NS);
         join:tag("password", { xmlns = MUC_NS }):text(room_password);
     end
+
+    -- Update the nil call id to the initial call id for call flows.
+	local call_id = get_username(room, context.user.id);
+    join_presence:maptags(function (tag)
+        if tag.name == "call_id" then
+           return st.stanza("call_id"):text(call_id);
+        end
+        return tag;
+    end);
 
     update_presence_identity(
         join_presence,
@@ -240,31 +261,22 @@ function create_poltergeist_occupant(room, nick, name, avatar, status, context)
     room:handle_first_presence(
         prosody.hosts[poltergeist_component], join_presence);
 
-    local timeout = poltergeist_timeout;
     -- the timeout before removing so participants can see the status update
     local removeTimeout = 5;
-    if (poltergeistExpiredStatus) then
-        timeout = timeout - removeTimeout;
-    end
+    local timeout = poltergeist_timeout - removeTimeout;
 
     timer.add_task(timeout,
         function ()
-            if (poltergeistExpiredStatus) then
-                update_poltergeist_occupant_status(
-                    room, nick, poltergeistExpiredStatus);
-                -- and remove it after some time so participant can see
-                -- the update
-                timer.add_task(removeTimeout,
-                    function ()
-                        if (have_poltergeist_occupant(room, nick)) then
-                            remove_poltergeist_occupant(room, nick, false);
-                        end
-                    end);
-            else
-                if (have_poltergeist_occupant(room, nick)) then
-                    remove_poltergeist_occupant(room, nick, false);
-                end
-            end
+            update_poltergeist_occupant_status(
+                room, nick, expired_status);
+            -- and remove it after some time so participant can see
+            -- the update
+            timer.add_task(removeTimeout,
+                function ()
+                    if (have_poltergeist_occupant(room, nick)) then
+                        remove_poltergeist_occupant(room, nick, false);
+                    end
+                end);
         end);
 end
 
@@ -290,15 +302,13 @@ end
 -- @param room the room instance where to remove the occupant
 -- @param nick the nick of the occupant to remove
 -- @param status the status to update
-function update_poltergeist_occupant_status(room, nick, status)
+-- @param call_details is a table of call flow details
+function update_poltergeist_occupant_status(room, nick, status, call_details)
     local update_presence = get_presence(room, nick);
 
     if (not update_presence) then
         -- no presence found for occupant, create one
-        update_presence = st.presence({
-            to = room.jid.."/"..nick,
-            from = poltergeist_component.."/"..nick
-        });
+        update_presence = generate_poltergeist_presence(room, nick)
     else
         -- update occupant presence with appropriate to and from
         -- so we can send it again
@@ -307,29 +317,55 @@ function update_poltergeist_occupant_status(room, nick, status)
         update_presence.attr.from = poltergeist_component.."/"..nick;
     end
 
-    local once = false;
-    -- the status tag we will attach
-    local statusTag = st.stanza("status"):text(status);
+    update_presence = update_presence_tags(update_presence, status, call_details)
 
-    -- if there is already a status tag replace it
-    update_presence:maptags(function (tag)
-        if tag.name == statusTag.name then
-            if not once then
-                once = true;
-                return statusTag;
+    room:handle_normal_presence(
+        prosody.hosts[poltergeist_component], update_presence);
+end
+
+-- Updates the status tags and call flow tags of an existing poltergeist's
+-- presence.
+-- @param presence_stanza is the actual presence stanza for a poltergeist.
+-- @param status is the new status to be updated in the stanza.
+-- @param call_details is a table of call flow signal information.
+function update_presence_tags(presence_stanza, status, call_details)
+    local call_cancel = false;
+    local call_id = nil;
+
+    -- Extract optional call flow signal information.
+    if call_details then
+        call_id = call_details["id"];
+
+        if call_details["cancel"] then
+            call_cancel = call_details["cancel"];
+        end
+    end
+
+    presence_stanza:maptags(function (tag)
+        if tag.name == "status" then
+            if call_cancel then
+                -- If call cancel is set then the status should not be changed.
+                return tag
+            end
+            return st.stanza("status"):text(status);
+        elseif tag.name == "call_id" then
+            if call_id then
+                return st.stanza("call_id"):text(call_id);
             else
-                return nil;
+                -- If no call id is provided the re-use the existing id.
+                return tag;
+            end
+        elseif tag.name == "call_cancel" then
+            if call_cancel then
+                return st.stanza("call_cancel"):text("true");
+            else
+                return st.stanza("call_cancel"):text("false");
             end
         end
         return tag;
     end);
-    if (not once) then
-        -- no status tag was repleced, attach it
-        update_presence:add_child(statusTag);
-    end
 
-    room:handle_normal_presence(
-        prosody.hosts[poltergeist_component], update_presence);
+    return presence_stanza
 end
 
 -- Checks for existance of a poltergeist occupant
@@ -448,6 +484,12 @@ function handle_update_poltergeist (event)
     local room_name = params["room"];
     local group = params["group"];
     local status = params["status"];
+	local call_id = params["callid"];
+
+	local call_cancel = false
+	if params["callcancel"] == "true" then
+	   call_cancel = true;
+	end
 
     if not verify_token(params["token"], room_name, group, {}) then
         return 403;
@@ -464,9 +506,14 @@ function handle_update_poltergeist (event)
         return 404;
     end
 
+	local call_details = {
+	   ["cancel"] = call_cancel;
+	   ["id"] = call_id;
+	};
+
     local nick = string.sub(username, 0, 8);
     if (have_poltergeist_occupant(room, nick)) then
-        update_poltergeist_occupant_status(room, nick, status);
+        update_poltergeist_occupant_status(room, nick, status, call_details);
         return 200;
     else
         return 404;

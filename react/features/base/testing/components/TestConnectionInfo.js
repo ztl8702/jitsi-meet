@@ -1,10 +1,8 @@
 // @flow
 
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import { connect } from 'react-redux';
 
-
-import { Fragment } from '../../react';
 import { getLocalParticipant } from '../../participants';
 
 // FIXME this imports feature to 'base'
@@ -83,8 +81,7 @@ type State = {
  * a good thing).
  */
 class TestConnectionInfo extends Component<Props, State> {
-
-    _onStatsUpdated: Object => void
+    _onStatsUpdated: Object => void;
 
     /**
      * Initializes new <tt>TestConnectionInfo</tt> instance.

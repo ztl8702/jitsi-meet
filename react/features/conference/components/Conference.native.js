@@ -10,6 +10,7 @@ import { appNavigate } from '../../app';
 import { connect, disconnect } from '../../base/connection';
 import { DialogContainer } from '../../base/dialog';
 import { CalleeInfoContainer } from '../../base/jwt';
+import { getParticipantCount } from '../../base/participants';
 import { Container, LoadingIndicator, TintedView } from '../../base/react';
 import { TestConnectionInfo } from '../../base/testing';
 import { createDesiredLocalTracks } from '../../base/tracks';
@@ -18,15 +19,8 @@ import { Filmstrip } from '../../filmstrip';
 import { LargeVideo } from '../../large-video';
 import { setToolboxVisible, Toolbox } from '../../toolbox';
 
+import ConferenceIndicators from './ConferenceIndicators';
 import styles from './styles';
-
-/**
- * The timeout in milliseconds after which the Toolbox will be hidden.
- *
- * @private
- * @type {number}
- */
-const _TOOLBOX_TIMEOUT_MS = 5000;
 
 /**
  * The type of the React {@code Component} props of {@link Conference}.
@@ -69,6 +63,13 @@ type Props = {
     _onHardwareBackPress: Function,
 
     /**
+     * The number of participants in the conference.
+     *
+     * @private
+     */
+    _participantCount: number,
+
+    /**
      * The indicator which determines whether the UI is reduced (to accommodate
      * smaller display areas).
      *
@@ -89,7 +90,14 @@ type Props = {
      *
      * @private
      */
-    _toolboxVisible: boolean
+    _toolboxVisible: boolean,
+
+    /**
+     * The indicator which determines whether the Toolbox is always visible.
+     *
+     * @private
+     */
+    _toolboxAlwaysVisible: boolean
 };
 
 /**
@@ -97,8 +105,6 @@ type Props = {
  */
 class Conference extends Component<Props> {
     _backHandler: ?BackHandler;
-
-    _toolboxTimeout: ?number;
 
     /**
      * Initializes a new Conference instance.
@@ -108,15 +114,6 @@ class Conference extends Component<Props> {
      */
     constructor(props) {
         super(props);
-
-        /**
-         * The numerical ID of the timeout in milliseconds after which the
-         * Toolbox will be hidden. To be used with
-         * {@link WindowTimers#clearTimeout()}.
-         *
-         * @private
-         */
-        this._toolboxTimeout = undefined;
 
         // Bind event handlers so they are only bound once per instance.
         this._onClick = this._onClick.bind(this);
@@ -141,7 +138,11 @@ class Conference extends Component<Props> {
                 this._onHardwareBackPress);
         }
 
-        this._setToolboxTimeout(this.props._toolboxVisible);
+        // Show the toolbox if we are the only participant; otherwise, the whole
+        // UI looks too unpopulated the LargeVideo visible.
+        const { _participantCount, _setToolboxVisible } = this.props;
+
+        _participantCount === 1 && _setToolboxVisible(true);
     }
 
     /**
@@ -154,6 +155,29 @@ class Conference extends Component<Props> {
      */
     componentWillMount() {
         this.props._onConnect();
+    }
+
+    /**
+     * Notifies this mounted React {@code Component} that it will receive new
+     * props. Check if we need to show / hide the toolbox based on the
+     * participant count.
+     *
+     * @inheritdoc
+     * @param {Object} nextProps - The read-only React {@code Component} props
+     * that this instance will receive.
+     * @returns {void}
+     */
+    componentWillReceiveProps({ _participantCount: newParticipantCount }) {
+        const {
+            _participantCount: oldParticipantCount,
+            _setToolboxVisible
+        } = this.props;
+
+        if (oldParticipantCount === 1) {
+            newParticipantCount > 1 && _setToolboxVisible(false);
+        } else if (oldParticipantCount > 1) {
+            newParticipantCount === 1 && _setToolboxVisible(true);
+        }
     }
 
     /**
@@ -174,8 +198,6 @@ class Conference extends Component<Props> {
                 'hardwareBackPress',
                 this._onHardwareBackPress);
         }
-
-        this._clearToolboxTimeout();
 
         this.props._onDisconnect();
     }
@@ -231,6 +253,12 @@ class Conference extends Component<Props> {
                       * participants.
                       */}
                     <Filmstrip />
+
+                    {/*
+                      * A container that automatically renders indicators such
+                      * as VideoQualityLabel or RecordingLabel if need be.
+                      */}
+                    <ConferenceIndicators />
                 </View>
                 <TestConnectionInfo />
 
@@ -247,19 +275,6 @@ class Conference extends Component<Props> {
         );
     }
 
-    /**
-     * Clears {@link #_toolboxTimeout} if any.
-     *
-     * @private
-     * @returns {void}
-     */
-    _clearToolboxTimeout() {
-        if (this._toolboxTimeout) {
-            clearTimeout(this._toolboxTimeout);
-            this._toolboxTimeout = undefined;
-        }
-    }
-
     _onClick: () => void;
 
     /**
@@ -270,13 +285,13 @@ class Conference extends Component<Props> {
      * @returns {void}
      */
     _onClick() {
+        if (this.props._toolboxAlwaysVisible) {
+            return;
+        }
+
         const toolboxVisible = !this.props._toolboxVisible;
 
         this.props._setToolboxVisible(toolboxVisible);
-
-        // XXX If the user taps to toggle the visibility of the Toolbox, then no
-        // automatic toggling of the visibility should happen.
-        this._clearToolboxTimeout();
     }
 
     _onHardwareBackPress: () => boolean;
@@ -305,22 +320,6 @@ class Conference extends Component<Props> {
         return ConferenceNotification
             ? <ConferenceNotification />
             : undefined;
-    }
-
-    /**
-     * Triggers the default Toolbox timeout.
-     *
-     * @param {boolean} toolboxVisible - Indicates whether the Toolbox is
-     * currently visible.
-     * @private
-     * @returns {void}
-     */
-    _setToolboxTimeout(toolboxVisible) {
-        this._clearToolboxTimeout();
-        if (toolboxVisible) {
-            this._toolboxTimeout
-                = setTimeout(this._onClick, _TOOLBOX_TIMEOUT_MS);
-        }
     }
 }
 
@@ -394,14 +393,17 @@ function _mapDispatchToProps(dispatch) {
  * @private
  * @returns {{
  *     _connecting: boolean,
+ *     _participantCount: number,
  *     _reducedUI: boolean,
- *     _toolboxVisible: boolean
+ *     _toolboxVisible: boolean,
+ *     _toolboxAlwaysVisible: boolean
  * }}
  */
 function _mapStateToProps(state) {
     const { connecting, connection } = state['features/base/connection'];
     const { conference, joining, leaving } = state['features/base/conference'];
     const { reducedUI } = state['features/base/responsive-ui'];
+    const { alwaysVisible, visible } = state['features/toolbox'];
 
     // XXX There is a window of time between the successful establishment of the
     // XMPP connection and the subsequent commencement of joining the MUC during
@@ -428,6 +430,14 @@ function _mapStateToProps(state) {
         _connecting: Boolean(connecting_),
 
         /**
+         * The number of participants in the conference.
+         *
+         * @private
+         * @type {number}
+         */
+        _participantCount: getParticipantCount(state),
+
+        /**
          * The indicator which determines whether the UI is reduced (to
          * accommodate smaller display areas).
          *
@@ -442,7 +452,15 @@ function _mapStateToProps(state) {
          * @private
          * @type {boolean}
          */
-        _toolboxVisible: state['features/toolbox'].visible
+        _toolboxVisible: visible,
+
+        /**
+         * The indicator which determines whether the Toolbox is always visible.
+         *
+         * @private
+         * @type {boolean}
+         */
+        _toolboxAlwaysVisible: alwaysVisible
     };
 }
 

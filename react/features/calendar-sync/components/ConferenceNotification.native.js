@@ -15,6 +15,10 @@ import styles from './styles';
 
 const ALERT_MILLISECONDS = 5 * 60 * 1000;
 
+/**
+ * The type of the React {@code Component} props of
+ * {@link ConferenceNotification}.
+ */
 type Props = {
 
     /**
@@ -43,6 +47,10 @@ type Props = {
     t: Function
 };
 
+/**
+ * The type of the React {@code Component} state of
+ * {@link ConferenceNotification}.
+ */
 type State = {
 
     /**
@@ -56,20 +64,21 @@ type State = {
  * screen when another meeting is about to start.
  */
 class ConferenceNotification extends Component<Props, State> {
-    updateIntervalId: number;
+    updateIntervalId: IntervalID;
 
     /**
      * Constructor of the ConferenceNotification component.
      *
      * @inheritdoc
      */
-    constructor(props) {
+    constructor(props: Props) {
         super(props);
 
         this.state = {
             event: undefined
         };
 
+        // Bind event handlers so they are only bound once per instance.
         this._getNotificationContentStyle
             = this._getNotificationContentStyle.bind(this);
         this._getNotificationPosition
@@ -97,7 +106,7 @@ class ConferenceNotification extends Component<Props, State> {
      * @inheritdoc
      */
     componentWillUnmount() {
-        clearTimeout(this.updateIntervalId);
+        clearInterval(this.updateIntervalId);
     }
 
     /**
@@ -110,6 +119,12 @@ class ConferenceNotification extends Component<Props, State> {
         const { t } = this.props;
 
         if (event) {
+            const now = Date.now();
+            const label
+                = event.startDate < now && event.endDate > now
+                    ? 'calendarSync.ongoingMeeting'
+                    : 'calendarSync.nextMeeting';
+
             return (
                 <View
                     style = { [
@@ -126,7 +141,7 @@ class ConferenceNotification extends Component<Props, State> {
                                         styles.notificationTextContainer
                                     }>
                                     <Text style = { styles.notificationText }>
-                                        { t('calendarSync.nextMeeting') }
+                                        { t(label) }
                                     </Text>
                                     <Text style = { styles.notificationText }>
                                         {
@@ -154,7 +169,7 @@ class ConferenceNotification extends Component<Props, State> {
         return null;
     }
 
-    _getNotificationContentStyle: () => Array<Object>
+    _getNotificationContentStyle: () => Array<Object>;
 
     /**
      * Decides the color of the notification and some additional
@@ -245,7 +260,6 @@ class ConferenceNotification extends Component<Props, State> {
     /**
      * Opens the meeting URL that the notification shows.
      *
-     * @param {string} url - The URL to open.
      * @private
      * @returns {void}
      */

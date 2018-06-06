@@ -49,6 +49,7 @@ import {
 } from './constants';
 import {
     _addLocalTracksToConference,
+    getCurrentConference,
     sendLocalParticipant
 } from './functions';
 
@@ -125,13 +126,14 @@ function _addConferenceListeners(conference, dispatch) {
     conference.on(
         JitsiConferenceEvents.DISPLAY_NAME_CHANGED,
         (id, displayName) => dispatch(participantUpdated({
+            conference,
             id,
             name: displayName.substr(0, MAX_DISPLAY_NAME_LENGTH)
         })));
 
     conference.on(
         JitsiConferenceEvents.DOMINANT_SPEAKER_CHANGED,
-        (...args) => dispatch(dominantSpeakerChanged(...args)));
+        id => dispatch(dominantSpeakerChanged(id, conference)));
 
     conference.on(
         JitsiConferenceEvents.PARTICIPANT_CONN_STATUS_CHANGED,
@@ -139,14 +141,16 @@ function _addConferenceListeners(conference, dispatch) {
 
     conference.on(
         JitsiConferenceEvents.USER_JOINED,
-        (id, user) => dispatch(participantJoined({
+        (id, user) => !user.isHidden() && dispatch(participantJoined({
+            conference,
             id,
             name: user.getDisplayName(),
             role: user.getRole()
         })));
     conference.on(
         JitsiConferenceEvents.USER_LEFT,
-        (...args) => dispatch(participantLeft(...args)));
+        (id, user) => !user.isHidden()
+            && dispatch(participantLeft(id, conference)));
     conference.on(
         JitsiConferenceEvents.USER_ROLE_CHANGED,
         (...args) => dispatch(participantRoleChanged(...args)));
@@ -154,18 +158,21 @@ function _addConferenceListeners(conference, dispatch) {
     conference.addCommandListener(
         AVATAR_ID_COMMAND,
         (data, id) => dispatch(participantUpdated({
+            conference,
             id,
             avatarID: data.value
         })));
     conference.addCommandListener(
         AVATAR_URL_COMMAND,
         (data, id) => dispatch(participantUpdated({
+            conference,
             id,
             avatarURL: data.value
         })));
     conference.addCommandListener(
         EMAIL_COMMAND,
         (data, id) => dispatch(participantUpdated({
+            conference,
             id,
             email: data.value
         })));
@@ -637,9 +644,9 @@ export function setRoom(room: ?string) {
 export function setStartMutedPolicy(
         startAudioMuted: boolean, startVideoMuted: boolean) {
     return (dispatch: Dispatch<*>, getState: Function) => {
-        const { conference } = getState()['features/base/conference'];
+        const conference = getCurrentConference(getState());
 
-        conference.setStartMutedPolicy({
+        conference && conference.setStartMutedPolicy({
             audio: startAudioMuted,
             video: startVideoMuted
         });

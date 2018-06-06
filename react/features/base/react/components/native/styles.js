@@ -1,8 +1,8 @@
-import {
-    BoxModel,
-    ColorPalette,
-    createStyleSheet
-} from '../../../styles';
+// @flow
+
+import { StyleSheet } from 'react-native';
+
+import { BoxModel, ColorPalette, createStyleSheet } from '../../../styles';
 
 const AVATAR_OPACITY = 0.4;
 const AVATAR_SIZE = 65;
@@ -19,7 +19,7 @@ export const UNDERLAY_COLOR = 'rgba(255, 255, 255, 0.2)';
 
 const HEADER_STYLES = {
     /**
-     * Platform specific header button (e.g. back, menu...etc).
+     * Platform specific header button (e.g. back, menu, etc).
      */
     headerButton: {
         alignSelf: 'center',
@@ -47,19 +47,15 @@ const HEADER_STYLES = {
      * The top-level element of a page.
      */
     page: {
+        ...StyleSheet.absoluteFillObject,
         alignItems: 'stretch',
-        bottom: 0,
         flex: 1,
         flexDirection: 'column',
-        left: 0,
-        overflow: 'hidden',
-        position: 'absolute',
-        right: 0,
-        top: 0
+        overflow: 'hidden'
     },
 
     /**
-     * Base style of Header
+     * Base style of Header.
      */
     screenHeader: {
         alignItems: 'center',
@@ -280,8 +276,14 @@ const SIDEBAR_STYLES = {
      * The topmost container of the side bar.
      */
     sideMenuContainer: {
+        ...StyleSheet.absoluteFillObject
+    },
+
+    /**
+     * The container of the actual content of the side menu.
+     */
+    sideMenuContent: {
         bottom: 0,
-        flexDirection: 'row',
         left: -SIDEBAR_WIDTH,
         position: 'absolute',
         top: 0,
@@ -289,33 +291,18 @@ const SIDEBAR_STYLES = {
     },
 
     /**
-     * The container of the actual content of the side menu.
-     */
-    sideMenuContent: {
-        width: SIDEBAR_WIDTH
-    },
-
-    /**
-     * The opaque area that covers the rest of the scren, when
-     * the side bar is open.
+     * The opaque area that covers the rest of the screen, when the side bar is
+     * open.
      */
     sideMenuShadow: {
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        flex: 1
-    },
-
-    /**
-     * The touchable area of the rest of the screen that closes the side bar
-     * when tapped.
-     */
-    sideMenuShadowTouchable: {
-        flex: 1
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)'
     }
 };
 
 /**
- * The styles of the React {@code Components} of the generic components
- * in the app.
+ * The styles of the generic React {@code Component}s implemented by the feature
+ * base/react.
  */
 export default createStyleSheet({
     ...HEADER_STYLES,

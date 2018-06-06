@@ -16,11 +16,9 @@ if not muc_domain_base then
 end
 
 -- Status strings that trigger call events.
-local invited_status  = "Invited"
-local calling_status  = "Calling"
-local ringing_status  = "Ringing"
-local busy_status     = "Busy"
-local rejected_status = "Rejected"
+local calling_status   = "calling"
+local busy_status      = "busy"
+local rejected_status  = "rejected"
 local connected_status = "connected"
 
 
@@ -53,11 +51,9 @@ end
 --    -------------------------
 --    Status      | Event Type
 --    _________________________
---    "Calling"   | INVITE
---    "Invited"   | INVITE
---    "Ringing"   | CANCEL
---    "Busy"      | CANCEL
---    "Rejected"  | CANCEL
+--    "calling"   | INVITE
+--    "busy"      | CANCEL
+--    "rejected"  | CANCEL
 --    "connected" | CANCEL
 module:hook("muc-broadcast-presence", function (event)
     -- Detect if the presence is for a poltergeist or not.
@@ -69,22 +65,32 @@ module:hook("muc-broadcast-presence", function (event)
 	   return
     end
 
-	local invite = function()
-		 local url = assert(url_from_room_jid(event.stanza.attr.from))
-		 ext_events.invite(event.stanza, url)
+	local call_id = event.stanza:get_child_text("call_id")
+	if not call_id then
+	   module:log("info", "A call id was not provided in the status.")
+	   return
 	end
 
-	local cancel = function()
+    local invite = function()
+	    local url = assert(url_from_room_jid(event.stanza.attr.from))
+		ext_events.invite(event.stanza, url, call_id)
+	end
+
+    local cancel = function()
 	   local url = assert(url_from_room_jid(event.stanza.attr.from))
 	   local status = event.stanza:get_child_text("status")
-	   ext_events.cancel(event.stanza, url, string.lower(status))
+	   ext_events.cancel(event.stanza, url, string.lower(status), call_id)
 	end
+
+    local should_cancel = event.stanza:get_child_text("call_cancel")
+    if should_cancel == "true" then
+        cancel()
+        return
+    end
 
 	local switch = function(status)
 	   case = {
-		  [invited_status]   = function() invite() end,
 		  [calling_status]   = function() invite() end,
-		  [ringing_status]   = function() cancel() end,
 		  [busy_status]      = function() cancel() end,
 		  [rejected_status]  = function() cancel() end,
 		  [connected_status] = function() cancel() end

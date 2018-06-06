@@ -9,6 +9,9 @@ import {
     pinParticipant
 } from '../../../react/features/base/participants';
 
+import { SHARED_VIDEO_CONTAINER_TYPE } from '../shared_video/SharedVideo';
+import SharedVideoThumb from '../shared_video/SharedVideoThumb';
+
 import Filmstrip from './Filmstrip';
 import UIEvents from '../../../service/UI/UIEvents';
 import UIUtil from '../util/UIUtil';
@@ -16,12 +19,11 @@ import UIUtil from '../util/UIUtil';
 import RemoteVideo from './RemoteVideo';
 import LargeVideoManager from './LargeVideoManager';
 import { VIDEO_CONTAINER_TYPE } from './VideoContainer';
+
 import LocalVideo from './LocalVideo';
 
 const remoteVideos = {};
 let localVideoThumbnail = null;
-
-let currentDominantSpeaker = null;
 
 let eventEmitter = null;
 
@@ -41,6 +43,47 @@ function onLocalFlipXChanged(val) {
     if (largeVideo) {
         largeVideo.onLocalFlipXChange(val);
     }
+}
+
+/**
+ * Returns the redux representation of all known users.
+ *
+ * @private
+ * @returns {Array}
+ */
+function getAllParticipants() {
+    return APP.store.getState()['features/base/participants'];
+}
+
+/**
+ * Returns an array of all thumbnails in the filmstrip.
+ *
+ * @private
+ * @returns {Array}
+ */
+function getAllThumbnails() {
+    return [
+        localVideoThumbnail,
+        ...Object.values(remoteVideos)
+    ];
+}
+
+/**
+ * Returns the user ID of the remote participant that is current the dominant
+ * speaker.
+ *
+ * @private
+ * @returns {string|null}
+ */
+function getCurrentRemoteDominantSpeakerID() {
+    const dominantSpeaker = getAllParticipants()
+        .find(participant => participant.dominantSpeaker);
+
+    if (dominantSpeaker) {
+        return dominantSpeaker.local ? null : dominantSpeaker.id;
+    }
+
+    return null;
 }
 
 /**
@@ -66,7 +109,10 @@ const VideoLayout = {
     init(emitter) {
         eventEmitter = emitter;
 
-        localVideoThumbnail = new LocalVideo(VideoLayout, emitter);
+        localVideoThumbnail = new LocalVideo(
+            VideoLayout,
+            emitter,
+            this._updateLargeVideoIfDisplayed.bind(this));
 
         // sets default video type of local video
         // FIXME container type is totally different thing from the video type
@@ -75,8 +121,6 @@ const VideoLayout = {
         // if we do not resize the thumbs here, if there is no video device
         // the local video thumb maybe one pixel
         this.resizeThumbnails(true);
-
-        this.handleVideoThumbClicked = this.handleVideoThumbClicked.bind(this);
 
         this.registerListeners();
     },
@@ -138,10 +182,7 @@ const VideoLayout = {
 
         localVideoThumbnail.changeVideo(stream);
 
-        /* Update if we're currently being displayed */
-        if (this.isCurrentlyOnLarge(localId)) {
-            this.updateLargeVideo(localId);
-        }
+        this._updateLargeVideoIfDisplayed(localId);
     },
 
     /**
@@ -216,7 +257,7 @@ const VideoLayout = {
      * Uses focusedID if any or dominantSpeakerID if any,
      * otherwise elects new video, in this order.
      */
-    updateAfterThumbRemoved(id) {
+    _updateAfterThumbRemoved(id) {
         // Always trigger an update if large video is empty.
         if (!largeVideo
             || (this.getLargeVideoID() && !this.isCurrentlyOnLarge(id))) {
@@ -228,8 +269,8 @@ const VideoLayout = {
 
         if (pinnedId) {
             newId = pinnedId;
-        } else if (currentDominantSpeaker) {
-            newId = currentDominantSpeaker;
+        } else if (getCurrentRemoteDominantSpeakerID()) {
+            newId = getCurrentRemoteDominantSpeakerID();
         } else { // Otherwise select last visible video
             newId = this.electLastVisibleVideo();
         }
@@ -310,6 +351,11 @@ const VideoLayout = {
         if (remoteVideo) {
             remoteVideo.removeRemoteStreamElement(stream);
         }
+
+        if (stream.isVideoTrack()) {
+            this._updateLargeVideoIfDisplayed(id);
+        }
+
         this.updateMutedForNoTracks(id, stream.getType());
     },
 
@@ -359,80 +405,65 @@ const VideoLayout = {
     },
 
     /**
-     * Updates the desired pinned participant and notifies web UI of the change.
+     * Callback invoked to update display when the pin participant has changed.
      *
-     * @param {string|null} id - The participant id of the participant to be
-     * pinned. Pass in null to unpin without pinning another participant.
+     * @paramn {string|null} pinnedParticipantID - The participant ID of the
+     * participant that is pinned or null if no one is pinned.
      * @returns {void}
      */
-    pinParticipant(id) {
-        APP.store.dispatch(pinParticipant(id));
-        APP.UI.emitEvent(UIEvents.PINNED_ENDPOINT, id, Boolean(id));
-    },
-
-    /**
-     * Handles the click on a video thumbnail.
-     *
-     * @param id the identifier of the video thumbnail
-     */
-    handleVideoThumbClicked(id) {
-        const smallVideo = VideoLayout.getSmallVideo(id);
-        const pinnedId = this.getPinnedId();
-
-        if (pinnedId) {
-            const oldSmallVideo = VideoLayout.getSmallVideo(pinnedId);
-
-            if (oldSmallVideo && !interfaceConfig.filmStripOnly) {
-                oldSmallVideo.focus(false);
-            }
+    onPinChange(pinnedParticipantID) {
+        if (interfaceConfig.filmStripOnly) {
+            return;
         }
 
-        // Unpin if currently pinned.
-        if (pinnedId === id) {
-            this.pinParticipant(null);
+        getAllThumbnails().forEach(thumbnail =>
+            thumbnail.focus(pinnedParticipantID === thumbnail.getId()));
 
-            // Enable the currently set dominant speaker.
-            if (currentDominantSpeaker) {
-                this.updateLargeVideo(currentDominantSpeaker);
+        if (pinnedParticipantID) {
+            this.updateLargeVideo(pinnedParticipantID);
+        } else {
+            const currentDominantSpeakerID
+                = getCurrentRemoteDominantSpeakerID();
+
+            if (currentDominantSpeakerID) {
+                this.updateLargeVideo(currentDominantSpeakerID);
             } else {
-                // if there is no currentDominantSpeaker, it can also be
+                // if there is no currentDominantSpeakerID, it can also be
                 // that local participant is the dominant speaker
                 // we should act as a participant has left and was on large
                 // and we should choose somebody (electLastVisibleVideo)
                 this.updateLargeVideo(this.electLastVisibleVideo());
             }
+        }
+    },
+
+    /**
+     * Creates a participant container for the given id.
+     *
+     * @param {Object} participant - The redux representation of a remote
+     * participant.
+     * @returns {void}
+     */
+    addRemoteParticipantContainer(participant) {
+        if (!participant || participant.local) {
+            return;
+        } else if (participant.isBot) {
+            const sharedVideoThumb = new SharedVideoThumb(
+                participant,
+                SHARED_VIDEO_CONTAINER_TYPE,
+                VideoLayout);
+
+            this.addRemoteVideoContainer(participant.id, sharedVideoThumb);
 
             return;
         }
 
-        // Update focused/pinned interface.
-        if (id) {
-            if (smallVideo && !interfaceConfig.filmStripOnly) {
-                smallVideo.focus(true);
-                this.pinParticipant(id);
-            }
-        }
+        const id = participant.id;
+        const jitsiParticipant = APP.conference.getParticipantById(id);
+        const remoteVideo
+            = new RemoteVideo(jitsiParticipant, VideoLayout, eventEmitter);
 
-        this.updateLargeVideo(id);
-    },
-
-    /**
-     * Creates or adds a participant container for the given id and smallVideo.
-     *
-     * @param {JitsiParticipant} user the participant to add
-     * @param {SmallVideo} smallVideo optional small video instance to add as a
-     * remote video, if undefined <tt>RemoteVideo</tt> will be created
-     */
-    addParticipantContainer(user, smallVideo) {
-        const id = user.getId();
-        let remoteVideo;
-
-        if (smallVideo) {
-            remoteVideo = smallVideo;
-        } else {
-            remoteVideo = new RemoteVideo(user, VideoLayout, eventEmitter);
-        }
-        this._setRemoteControlProperties(user, remoteVideo);
+        this._setRemoteControlProperties(jitsiParticipant, remoteVideo);
         this.addRemoteVideoContainer(id, remoteVideo);
 
         this.updateMutedForNoTracks(id, 'audio');
@@ -501,11 +532,11 @@ const VideoLayout = {
         const pinnedId = this.getPinnedId();
 
         if ((!pinnedId
-            && !currentDominantSpeaker
+            && !getCurrentRemoteDominantSpeakerID()
             && this.isLargeContainerTypeVisible(VIDEO_CONTAINER_TYPE))
             || pinnedId === resourceJid
             || (!pinnedId && resourceJid
-                && currentDominantSpeaker === resourceJid)
+                && getCurrentRemoteDominantSpeakerID() === resourceJid)
 
             /* Playback started while we're on the stage - may need to update
                video source with the new stream */
@@ -662,42 +693,18 @@ const VideoLayout = {
 
     /**
      * On dominant speaker changed event.
+     *
+     * @param {string} id - The participant ID of the new dominant speaker.
+     * @returns {void}
      */
     onDominantSpeakerChanged(id) {
-        if (id === currentDominantSpeaker) {
+        getAllThumbnails().forEach(thumbnail =>
+            thumbnail.showDominantSpeakerIndicator(id === thumbnail.getId()));
+
+
+        if (!remoteVideos[id]) {
             return;
         }
-
-        const oldSpeakerRemoteVideo = remoteVideos[currentDominantSpeaker];
-
-        // We ignore local user events, but just unmark remote user as dominant
-        // while we are talking
-
-        if (APP.conference.isLocalId(id)) {
-            if (oldSpeakerRemoteVideo) {
-                oldSpeakerRemoteVideo.showDominantSpeakerIndicator(false);
-                currentDominantSpeaker = null;
-            }
-            localVideoThumbnail.showDominantSpeakerIndicator(true);
-
-            return;
-        }
-
-        const remoteVideo = remoteVideos[id];
-
-        if (!remoteVideo) {
-            return;
-        }
-
-        // Update the current dominant speaker.
-        remoteVideo.showDominantSpeakerIndicator(true);
-        localVideoThumbnail.showDominantSpeakerIndicator(false);
-
-        // let's remove the indications from the remote video if any
-        if (oldSpeakerRemoteVideo) {
-            oldSpeakerRemoteVideo.showDominantSpeakerIndicator(false);
-        }
-        currentDominantSpeaker = id;
 
         // Local video will not have container found, but that's ok
         // since we don't want to switch to local video.
@@ -801,12 +808,7 @@ const VideoLayout = {
         // Unlock large video
         if (this.getPinnedId() === id) {
             logger.info('Focused video owner has left the conference');
-            this.pinParticipant(null);
-        }
-
-        if (currentDominantSpeaker === id) {
-            logger.info('Dominant speaker has left the conference');
-            currentDominantSpeaker = null;
+            APP.store.dispatch(pinParticipant(null));
         }
 
         const remoteVideo = remoteVideos[id];
@@ -821,6 +823,7 @@ const VideoLayout = {
         }
 
         VideoLayout.resizeThumbnails();
+        VideoLayout._updateAfterThumbRemoved(id);
     },
 
     onVideoTypeChanged(id, newVideoType) {
@@ -854,14 +857,13 @@ const VideoLayout = {
     /**
      * Resizes the video area.
      *
+     * TODO: Remove the "animate" param as it is no longer passed in as true.
+     *
      * @param forceUpdate indicates that hidden thumbnails will be shown
-     * @param completeFunction a function to be called when the video area is
-     * resized.
      */
     resizeVideoArea(
             forceUpdate = false,
-            animate = false,
-            completeFunction = null) {
+            animate = false) {
         if (largeVideo) {
             largeVideo.updateContainerSize();
             largeVideo.resize(animate);
@@ -877,17 +879,6 @@ const VideoLayout = {
 
         // Resize the thumbnails first.
         this.resizeThumbnails(forceUpdate);
-
-        // Resize the video area element.
-        $('#videospace').animate({
-            right: window.innerWidth - availableWidth,
-            width: availableWidth,
-            height: availableHeight
-        }, {
-            queue: false,
-            duration: animate ? 500 : 1,
-            complete: completeFunction
-        });
     },
 
     getSmallVideo(id) {
@@ -1177,6 +1168,20 @@ const VideoLayout = {
         Object.values(remoteVideos).forEach(
             remoteVideo => remoteVideo.updateRemoteVideoMenu()
         );
+    },
+
+    /**
+     * Triggers an update of large video if the passed in participant is
+     * currently displayed on large video.
+     *
+     * @param {string} participantId - The participant ID that should trigger an
+     * update of large video if displayed.
+     * @returns {void}
+     */
+    _updateLargeVideoIfDisplayed(participantId) {
+        if (this.isCurrentlyOnLarge(participantId)) {
+            this.updateLargeVideo(participantId);
+        }
     }
 };
 

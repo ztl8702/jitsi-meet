@@ -57,7 +57,7 @@ import java.util.Set;
  * Before a call has started and after it has ended the
  * {@code AudioModeModule.DEFAULT} mode should be used.
  */
-class AudioModeModule extends ReactContextBaseJavaModule {
+class AudioModeModule extends ReactContextBaseJavaModule implements AudioManager.OnAudioFocusChangeListener {
     /**
      * Constants representing the audio mode.
      * - DEFAULT: Used before and after every call. It represents the default
@@ -72,12 +72,19 @@ class AudioModeModule extends ReactContextBaseJavaModule {
     private static final int VIDEO_CALL = 2;
 
     /**
-     *
+     * Constant defining the action for plugging in a headset. This is used on
+     * our device detection system for API < 23.
      */
     private static final String ACTION_HEADSET_PLUG
         = (Build.VERSION.SDK_INT >= 21)
             ? AudioManager.ACTION_HEADSET_PLUG
             : Intent.ACTION_HEADSET_PLUG;
+
+    /**
+     * Constant defining a USB headset. Only available on API level >= 26.
+     * The value of: AudioDeviceInfo.TYPE_USB_HEADSET
+     */
+    private static final int TYPE_USB_HEADSET = 22;
 
     /**
      * The name of {@code AudioModeModule} to be used in the React Native
@@ -89,6 +96,11 @@ class AudioModeModule extends ReactContextBaseJavaModule {
      * The {@code Log} tag {@code AudioModeModule} is to log messages with.
      */
     static final String TAG = MODULE_NAME;
+
+    /**
+     * Indicator that we have lost audio focus.
+     */
+    private boolean audioFocusLost = false;
 
     /**
      * {@link AudioManager} instance used to interact with the Android audio
@@ -133,6 +145,7 @@ class AudioModeModule extends ReactContextBaseJavaModule {
                     break;
                 case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
                 case AudioDeviceInfo.TYPE_WIRED_HEADSET:
+                case TYPE_USB_HEADSET:
                     devices.add(DEVICE_HEADPHONES);
                     break;
                 }
@@ -338,6 +351,36 @@ class AudioModeModule extends ReactContextBaseJavaModule {
     }
 
     /**
+     * {@link AudioManager.OnAudioFocusChangeListener} interface method. Called
+     * when the audio focus of the system is updated.
+     *
+     * @param focusChange - The type of focus change.
+     */
+    @Override
+    public void onAudioFocusChange(int focusChange) {
+        switch (focusChange) {
+        case AudioManager.AUDIOFOCUS_GAIN: {
+            Log.d(TAG, "Audio focus gained");
+            // Some other application potentially stole our audio focus
+            // temporarily. Restore our mode.
+            if (audioFocusLost) {
+                updateAudioRoute(mode);
+            }
+            audioFocusLost = false;
+            break;
+        }
+        case AudioManager.AUDIOFOCUS_LOSS:
+        case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+        case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK: {
+            Log.d(TAG, "Audio focus lost");
+            audioFocusLost = true;
+            break;
+        }
+
+        }
+    }
+
+    /**
      * Sets the user selected audio device as the active audio device.
      *
      * @param device the desired device which will become active.
@@ -487,8 +530,9 @@ class AudioModeModule extends ReactContextBaseJavaModule {
         Log.d(TAG, "Update audio route for mode: " + mode);
 
         if (mode == DEFAULT) {
+            audioFocusLost = false;
             audioManager.setMode(AudioManager.MODE_NORMAL);
-            audioManager.abandonAudioFocus(null);
+            audioManager.abandonAudioFocus(this);
             audioManager.setSpeakerphoneOn(false);
             setBluetoothAudioRoute(false);
             selectedDevice = null;
@@ -501,7 +545,7 @@ class AudioModeModule extends ReactContextBaseJavaModule {
         audioManager.setMicrophoneMute(false);
 
         if (audioManager.requestAudioFocus(
-                    null,
+                    this,
                     AudioManager.STREAM_VOICE_CALL,
                     AudioManager.AUDIOFOCUS_GAIN)
                 == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {

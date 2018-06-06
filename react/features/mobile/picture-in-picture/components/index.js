@@ -1,2 +1,1 @@
-export { default as EnterPictureInPictureToolbarButton }
-    from './EnterPictureInPictureToolbarButton';
+export { default as PictureInPictureButton } from './PictureInPictureButton';

@@ -16,15 +16,14 @@ import {
 } from '../../../react/features/analytics';
 import {
     participantJoined,
-    participantLeft
+    participantLeft,
+    pinParticipant
 } from '../../../react/features/base/participants';
 import {
     dockToolbox,
     getToolboxHeight,
     showToolbox
 } from '../../../react/features/toolbox';
-
-import SharedVideoThumb from './SharedVideoThumb';
 
 export const SHARED_VIDEO_CONTAINER_TYPE = 'sharedvideo';
 
@@ -281,13 +280,6 @@ export default class SharedVideoManager {
 
             player.playVideo();
 
-            const thumb = new SharedVideoThumb(
-                self.url, SHARED_VIDEO_CONTAINER_TYPE, VideoLayout);
-
-            thumb.setDisplayName('YouTube');
-            VideoLayout.addRemoteVideoContainer(self.url, thumb);
-            VideoLayout.resizeThumbnails(true);
-
             const iframe = player.getIframe();
 
             // eslint-disable-next-line no-use-before-define
@@ -306,12 +298,18 @@ export default class SharedVideoManager {
                 SHARED_VIDEO_CONTAINER_TYPE, self.sharedVideo);
 
             APP.store.dispatch(participantJoined({
+
+                // FIXME The cat is out of the bag already or rather _room is
+                // not private because it is used in multiple other places
+                // already such as AbstractPageReloadOverlay and
+                // JitsiMeetLogStorage.
+                conference: APP.conference._room,
                 id: self.url,
                 isBot: true,
                 name: 'YouTube'
             }));
 
-            VideoLayout.handleVideoThumbClicked(self.url);
+            APP.store.dispatch(pinParticipant(self.url));
 
             // If we are sending the command and we are starting the player
             // we need to continuously send the player current time position
@@ -491,7 +489,7 @@ export default class SharedVideoManager {
             this.localAudioMutedListener);
         this.localAudioMutedListener = null;
 
-        VideoLayout.removeParticipantContainer(this.url);
+        APP.store.dispatch(participantLeft(this.url, APP.conference._room));
 
         VideoLayout.showLargeVideoContainer(SHARED_VIDEO_CONTAINER_TYPE, false)
             .then(() => {
@@ -515,8 +513,6 @@ export default class SharedVideoManager {
                 this.emitter.emit(
                     UIEvents.UPDATE_SHARED_VIDEO, null, 'removed');
             });
-
-        APP.store.dispatch(participantLeft(this.url));
 
         this.url = null;
         this.isSharedVideoShown = false;

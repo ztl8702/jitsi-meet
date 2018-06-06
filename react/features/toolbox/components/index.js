@@ -1,3 +1,6 @@
-export { default as ToolbarButton } from './ToolbarButton';
-export { default as ToolboxFilmstrip } from './ToolboxFilmstrip';
-export { default as Toolbox } from './Toolbox';
+// @flow
+
+export * from './_';
+export { default as AudioMuteButton } from './AudioMuteButton';
+export { default as HangupButton } from './HangupButton';
+export { default as VideoMuteButton } from './VideoMuteButton';

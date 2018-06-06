@@ -11,7 +11,10 @@ import { i18next } from '../../../react/features/base/i18n';
 import {
     JitsiParticipantConnectionStatus
 } from '../../../react/features/base/lib-jitsi-meet';
-
+import {
+    getPinnedParticipant,
+    pinParticipant
+} from '../../../react/features/base/participants';
 import { PresenceLabel } from '../../../react/features/presence-status';
 import {
     REMOTE_CONTROL_MENU_STATES,
@@ -234,10 +237,12 @@ RemoteVideo.prototype._requestRemoteControlPermissions = function() {
         if (result === true) {
             // the remote control permissions has been granted
             // pin the controlled participant
-            const pinnedId = this.VideoLayout.getPinnedId();
+            const pinnedParticipant
+                = getPinnedParticipant(APP.store.getState()) || {};
+            const pinnedId = pinnedParticipant.id;
 
             if (pinnedId !== this.id) {
-                this.VideoLayout.handleVideoThumbClicked(this.id);
+                APP.store.dispatch(pinParticipant(this.id));
             }
         }
     }, error => {
@@ -361,14 +366,7 @@ RemoteVideo.prototype.removeRemoteStreamElement = function(stream) {
     logger.info(`${isVideo ? 'Video' : 'Audio'
     } removed ${this.id}`, select);
 
-    // when removing only the video element and we are on stage
-    // update the stage
-    if (isVideo && this.isCurrentlyOnLargeVideo()) {
-        this.VideoLayout.updateLargeVideo(this.id);
-    } else {
-        // Missing video stream will affect display mode
-        this.updateView();
-    }
+    this.updateView();
 };
 
 /**
@@ -470,10 +468,6 @@ RemoteVideo.prototype.remove = function() {
     this._unmountIndicators();
 
     this.removeRemoteVideoMenu();
-
-    // Make sure that the large video is updated if are removing its
-    // corresponding small video.
-    this.VideoLayout.updateAfterThumbRemoved(this.id);
 
     // Remove whole container
     if (this.container.parentNode) {
@@ -609,7 +603,9 @@ RemoteVideo.prototype.addPresenceLabel = function() {
     if (presenceLabelContainer) {
         ReactDOM.render(
             <Provider store = { APP.store }>
-                <PresenceLabel participantID = { this.id } />
+                <I18nextProvider i18n = { i18next }>
+                    <PresenceLabel participantID = { this.id } />
+                </I18nextProvider>
             </Provider>,
             presenceLabelContainer);
     }
@@ -646,7 +642,7 @@ RemoteVideo.prototype._onContainerClick = function(event) {
             || classList.contains('popover');
 
     if (!ignoreClick) {
-        this.VideoLayout.handleVideoThumbClicked(this.id);
+        this._togglePin();
     }
 
     // On IE we need to populate this handler on video <object> and it does not

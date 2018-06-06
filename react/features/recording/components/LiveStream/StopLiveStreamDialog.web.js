@@ -1,8 +1,36 @@
-import PropTypes from 'prop-types';
+// @flow
+
 import React, { Component } from 'react';
+import { connect } from 'react-redux';
 
 import { Dialog } from '../../../base/dialog';
 import { translate } from '../../../base/i18n';
+import {
+    createRecordingDialogEvent,
+    sendAnalytics
+} from '../../../analytics';
+
+/**
+ * The type of the React {@code Component} props of
+ * {@link StopLiveStreamDialog}.
+ */
+type Props = {
+
+    /**
+     * The {@code JitsiConference} for the current conference.
+     */
+    _conference: Object,
+
+    /**
+     * The redux representation of the live stremaing to be stopped.
+     */
+    session: Object,
+
+    /**
+     * Invoked to obtain translated strings.
+     */
+    t: Function
+};
 
 /**
  * A React Component for confirming the participant wishes to stop the currently
@@ -10,41 +38,17 @@ import { translate } from '../../../base/i18n';
  *
  * @extends Component
  */
-class StopLiveStreamDialog extends Component {
-    /**
-     * {@code StopLiveStreamDialog} component's property types.
-     *
-     * @static
-     */
-    static propTypes = {
-        /**
-         * Callback to invoke when the dialog is dismissed without confirming
-         * the live stream should be stopped.
-         */
-        onCancel: PropTypes.func,
-
-        /**
-         * Callback to invoke when confirming the live stream should be stopped.
-         */
-        onSubmit: PropTypes.func,
-
-        /**
-         * Invoked to obtain translated strings.
-         */
-        t: PropTypes.func
-    };
-
+class StopLiveStreamDialog extends Component<Props> {
     /**
      * Initializes a new {@code StopLiveStreamDialog} instance.
      *
      * @param {Object} props - The read-only properties with which the new
      * instance is to be initialized.
      */
-    constructor(props) {
+    constructor(props: Props) {
         super(props);
 
         // Bind event handler so it is only bound once for every instance.
-        this._onCancel = this._onCancel.bind(this);
         this._onSubmit = this._onSubmit.bind(this);
     }
 
@@ -58,7 +62,6 @@ class StopLiveStreamDialog extends Component {
         return (
             <Dialog
                 okTitleKey = 'dialog.stopLiveStreaming'
-                onCancel = { this._onCancel }
                 onSubmit = { this._onSubmit }
                 titleKey = 'dialog.liveStreaming'
                 width = 'small'>
@@ -67,17 +70,7 @@ class StopLiveStreamDialog extends Component {
         );
     }
 
-    /**
-     * Callback invoked when stopping of live streaming is canceled.
-     *
-     * @private
-     * @returns {boolean} True to close the modal.
-     */
-    _onCancel() {
-        this.props.onCancel();
-
-        return true;
-    }
+    _onSubmit: () => boolean;
 
     /**
      * Callback invoked when stopping of live streaming is confirmed.
@@ -86,10 +79,32 @@ class StopLiveStreamDialog extends Component {
      * @returns {boolean} True to close the modal.
      */
     _onSubmit() {
-        this.props.onSubmit();
+        sendAnalytics(createRecordingDialogEvent('stop', 'confirm.button'));
+
+        const { session } = this.props;
+
+        if (session) {
+            this.props._conference.stopRecording(session.id);
+        }
 
         return true;
     }
 }
 
-export default translate(StopLiveStreamDialog);
+/**
+ * Maps (parts of) the redux state to the React {@code Component} props of
+ * {@code StopLiveStreamDialog}.
+ *
+ * @param {Object} state - The redux state.
+ * @private
+ * @returns {{
+ *     _conference: Object
+ * }}
+ */
+function _mapStateToProps(state) {
+    return {
+        _conference: state['features/base/conference'].conference
+    };
+}
+
+export default translate(connect(_mapStateToProps)(StopLiveStreamDialog));

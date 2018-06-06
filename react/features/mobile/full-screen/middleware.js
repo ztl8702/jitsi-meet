@@ -4,15 +4,9 @@ import { StatusBar } from 'react-native';
 import { Immersive } from 'react-native-immersive';
 
 import { APP_WILL_MOUNT, APP_WILL_UNMOUNT } from '../../app';
-import {
-    CONFERENCE_FAILED,
-    CONFERENCE_JOINED,
-    CONFERENCE_LEFT,
-    CONFERENCE_WILL_JOIN,
-    SET_AUDIO_ONLY
-} from '../../base/conference';
+import { getCurrentConference } from '../../base/conference';
 import { Platform } from '../../base/react';
-import { MiddlewareRegistry } from '../../base/redux';
+import { MiddlewareRegistry, StateListenerRegistry } from '../../base/redux';
 
 import { _setImmersiveListener as _setImmersiveListenerA } from './actions';
 import { _SET_IMMERSIVE_LISTENER } from './actionTypes';
@@ -46,30 +40,20 @@ MiddlewareRegistry.register(store => next => action => {
         store.dispatch(_setImmersiveListenerA(undefined));
         break;
 
-    case CONFERENCE_WILL_JOIN:
-    case CONFERENCE_JOINED:
-    case SET_AUDIO_ONLY: {
-        const result = next(action);
-        const { audioOnly, conference, joining }
-            = store.getState()['features/base/conference'];
-
-        _setFullScreen(conference || joining ? !audioOnly : false);
-
-        return result;
-    }
-
-    case CONFERENCE_FAILED:
-    case CONFERENCE_LEFT: {
-        const result = next(action);
-
-        _setFullScreen(false);
-
-        return result;
-    }
     }
 
     return next(action);
 });
+
+StateListenerRegistry.register(
+    /* selector */ state => {
+        const { audioOnly } = state['features/base/conference'];
+        const conference = getCurrentConference(state);
+
+        return conference ? !audioOnly : false;
+    },
+    /* listener */ fullScreen => _setFullScreen(fullScreen)
+);
 
 /**
  * Handler for Immersive mode changes. This will be called when Android's
@@ -85,9 +69,9 @@ function _onImmersiveChange({ getState }) {
     const { appState } = state['features/background'];
 
     if (appState === 'active') {
-        const { audioOnly, conference, joining }
-            = state['features/base/conference'];
-        const fullScreen = conference || joining ? !audioOnly : false;
+        const { audioOnly } = state['features/base/conference'];
+        const conference = getCurrentConference(state);
+        const fullScreen = conference ? !audioOnly : false;
 
         _setFullScreen(fullScreen);
     }

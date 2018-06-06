@@ -3,7 +3,11 @@
 import _ from 'lodash';
 import type { Dispatch } from 'redux';
 
-import { conferenceLeft, conferenceWillLeave } from '../conference';
+import {
+    conferenceLeft,
+    conferenceWillLeave,
+    getCurrentConference
+} from '../conference';
 import JitsiMeetJS, { JitsiConnectionEvents } from '../lib-jitsi-meet';
 import { parseStandardURIString } from '../util';
 
@@ -14,6 +18,8 @@ import {
     CONNECTION_WILL_CONNECT,
     SET_LOCATION_URL
 } from './actionTypes';
+
+const logger = require('jitsi-meet-logger').getLogger(__filename);
 
 /**
  * The error structure passed to the {@link connectionFailed} action.
@@ -60,7 +66,7 @@ export type ConnectionFailedError = {
      * Indicates whether this event is recoverable or not.
      */
     recoverable?: boolean
-}
+};
 
 /**
  * Opens new connection.
@@ -98,7 +104,7 @@ export function connect(id: ?string, password: ?string) {
         });
 
         /**
-         * Dispatches CONNECTION_DISCONNECTED action when connection is
+         * Dispatches {@code CONNECTION_DISCONNECTED} action when connection is
          * disconnected.
          *
          * @param {string} message - Disconnect reason.
@@ -106,10 +112,7 @@ export function connect(id: ?string, password: ?string) {
          * @returns {void}
          */
         function _onConnectionDisconnected(message: string) {
-            connection.removeEventListener(
-                JitsiConnectionEvents.CONNECTION_DISCONNECTED,
-                _onConnectionDisconnected);
-
+            unsubscribe();
             dispatch(_connectionDisconnected(connection, message));
         }
 
@@ -120,7 +123,9 @@ export function connect(id: ?string, password: ?string) {
          * @returns {void}
          */
         function _onConnectionEstablished() {
-            unsubscribe();
+            connection.removeEventListener(
+                JitsiConnectionEvents.CONNECTION_ESTABLISHED,
+                _onConnectionEstablished);
             dispatch(connectionEstablished(connection));
         }
 
@@ -139,7 +144,6 @@ export function connect(id: ?string, password: ?string) {
         function _onConnectionFailed(
                 err: string, msg: string, credentials: Object) {
             unsubscribe();
-            console.error('CONNECTION FAILED:', err, msg);
             dispatch(
                 connectionFailed(
                     connection, {
@@ -151,15 +155,15 @@ export function connect(id: ?string, password: ?string) {
         }
 
         /**
-         * Unsubscribes connection instance from CONNECTION_ESTABLISHED
-         * and CONNECTION_FAILED events.
+         * Unsubscribe the connection instance from
+         * {@code CONNECTION_DISCONNECTED} and {@code CONNECTION_FAILED} events.
          *
          * @returns {void}
          */
         function unsubscribe() {
             connection.removeEventListener(
-                JitsiConnectionEvents.CONNECTION_ESTABLISHED,
-                _onConnectionEstablished);
+                JitsiConnectionEvents.CONNECTION_DISCONNECTED,
+                _onConnectionDisconnected);
             connection.removeEventListener(
                 JitsiConnectionEvents.CONNECTION_FAILED,
                 _onConnectionFailed);
@@ -170,7 +174,8 @@ export function connect(id: ?string, password: ?string) {
 /**
  * Create an action for when the signaling connection has been lost.
  *
- * @param {JitsiConnection} connection - The JitsiConnection which disconnected.
+ * @param {JitsiConnection} connection - The {@code JitsiConnection} which
+ * disconnected.
  * @param {string} message - Error message.
  * @private
  * @returns {{
@@ -188,26 +193,9 @@ function _connectionDisconnected(connection: Object, message: string) {
 }
 
 /**
- * Create an action for when a connection will connect.
- *
- * @param {JitsiConnection} connection - The JitsiConnection which will connect.
- * @private
- * @returns {{
- *     type: CONNECTION_WILL_CONNECT,
- *     connection: JitsiConnection
- * }}
- */
-function _connectionWillConnect(connection) {
-    return {
-        type: CONNECTION_WILL_CONNECT,
-        connection
-    };
-}
-
-/**
  * Create an action for when the signaling connection has been established.
  *
- * @param {JitsiConnection} connection - The JitsiConnection which was
+ * @param {JitsiConnection} connection - The {@code JitsiConnection} which was
  * established.
  * @public
  * @returns {{
@@ -225,7 +213,8 @@ export function connectionEstablished(connection: Object) {
 /**
  * Create an action for when the signaling connection could not be created.
  *
- * @param {JitsiConnection} connection - The JitsiConnection which failed.
+ * @param {JitsiConnection} connection - The {@code JitsiConnection} which
+ * failed.
  * @param {ConnectionFailedError} error - Error.
  * @public
  * @returns {{
@@ -247,6 +236,24 @@ export function connectionFailed(
         type: CONNECTION_FAILED,
         connection,
         error
+    };
+}
+
+/**
+ * Create an action for when a connection will connect.
+ *
+ * @param {JitsiConnection} connection - The {@code JitsiConnection} which will
+ * connect.
+ * @private
+ * @returns {{
+ *     type: CONNECTION_WILL_CONNECT,
+ *     connection: JitsiConnection
+ * }}
+ */
+function _connectionWillConnect(connection) {
+    return {
+        type: CONNECTION_WILL_CONNECT,
+        connection
     };
 }
 
@@ -303,10 +310,9 @@ function _constructOptions(state) {
 export function disconnect() {
     return (dispatch: Dispatch<*>, getState: Function): Promise<void> => {
         const state = getState();
-        const { conference, joining } = state['features/base/conference'];
 
         // The conference we have already joined or are joining.
-        const conference_ = conference || joining;
+        const conference_ = getCurrentConference(state);
 
         // Promise which completes when the conference has been left and the
         // connection has been disconnected.
@@ -322,7 +328,11 @@ export function disconnect() {
 
             promise
                 = conference_.leave()
-                    .catch(() => {
+                    .catch(error => {
+                        logger.warn(
+                            'JitsiConference.leave() rejected with:',
+                            error);
+
                         // The library lib-jitsi-meet failed to make the
                         // JitsiConference leave. Which may be because
                         // JitsiConference thinks it has already left.

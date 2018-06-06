@@ -13,6 +13,7 @@ var interfaceConfig = {
     DESKTOP_SHARING_BUTTON_DISABLED_TOOLTIP: null,
     INITIAL_TOOLBAR_TIMEOUT: 20000,
     TOOLBAR_TIMEOUT: 4000,
+    TOOLBAR_ALWAYS_VISIBLE: false,
     DEFAULT_REMOTE_DISPLAY_NAME: 'Fellow Jitster',
     DEFAULT_LOCAL_DISPLAY_NAME: 'me',
     SHOW_JITSI_WATERMARK: true,
@@ -46,7 +47,7 @@ var interfaceConfig = {
         'microphone', 'camera', 'desktop', 'fullscreen', 'fodeviceselection', 'hangup',
 
         // extended toolbar
-        'profile', 'info', 'chat', 'recording', 'etherpad',
+        'profile', 'info', 'chat', 'recording', 'livestreaming', 'etherpad',
         'sharedvideo', 'settings', 'raisehand', 'videoquality', 'filmstrip',
         'invite', 'feedback', 'stats', 'shortcuts'
     ],

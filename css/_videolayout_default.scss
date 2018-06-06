@@ -4,6 +4,8 @@
 
 #videospace {
     display: block;
+    height: 100%;
+    width: 100%;
     min-height: 100%;
     position: absolute;
     top: 0px;
@@ -222,6 +224,11 @@
 #largeVideoContainer {
     overflow: hidden;
     text-align: center;
+}
+
+#largeVideoContainer {
+    height: 100%;
+    width: 100%;
 }
 
 #largeVideoWrapper {
@@ -641,4 +648,95 @@
                     0px 1px 1px rgba(0,0,0,0.3),
                     1px 0px 1px rgba(0,0,0,0.3),
                     0px 0px 1px rgba(0,0,0,0.3);
+}
+
+.display-avatar-with-name {
+    .avatar-container {
+        visibility: visible;
+    }
+
+    .displayNameContainer {
+        visibility: visible;
+    }
+
+    .videocontainer__hoverOverlay {
+        visibility: visible;
+    }
+
+    video {
+        visibility: hidden;
+    }
+}
+
+.display-name-on-black {
+    .avatar-container {
+        visibility: hidden;
+    }
+
+    .displayNameContainer {
+        visibility: visible;
+    }
+
+    .videocontainer__hoverOverlay {
+        visibility: hidden;
+    }
+
+    video {
+        opacity: 0.2;
+        visibility: visible;
+    }
+}
+
+.display-video {
+    .avatar-container {
+        visibility: hidden;
+    }
+
+    .displayNameContainer {
+        visibility: hidden;
+    }
+
+    .videocontainer__hoverOverlay {
+        visibility: hidden;
+    }
+
+    video {
+        visibility: visible;
+    }
+}
+
+.display-name-on-video {
+    .avatar-container {
+        visibility: hidden;
+    }
+
+    .displayNameContainer {
+        visibility: visible;
+    }
+
+    .videocontainer__hoverOverlay {
+        visibility: visible;
+    }
+
+    video {
+        visibility: visible;
+    }
+}
+
+.display-avatar-only {
+    .avatar-container {
+        visibility: visible;
+    }
+
+    .displayNameContainer {
+        visibility: hidden;
+    }
+
+    .videocontainer__hoverOverlay {
+        visibility: hidden;
+    }
+
+    video {
+        visibility: hidden;
+    }
 }

@@ -12,7 +12,6 @@ import UIUtil from './util/UIUtil';
 import UIEvents from '../../service/UI/UIEvents';
 import EtherpadManager from './etherpad/Etherpad';
 import SharedVideoManager from './shared_video/SharedVideo';
-import Recording from './recording/Recording';
 
 import VideoLayout from './videolayout/VideoLayout';
 import Filmstrip from './videolayout/Filmstrip';
@@ -25,7 +24,6 @@ import { updateDeviceList } from '../../react/features/base/devices';
 import { JitsiTrackErrors } from '../../react/features/base/lib-jitsi-meet';
 import {
     getLocalParticipant,
-    participantPresenceChanged,
     showParticipantJoinedNotification
 } from '../../react/features/base/participants';
 import { destroyLocalTracks } from '../../react/features/base/tracks';
@@ -38,6 +36,7 @@ import {
 import { shouldShowOnlyDeviceSelection } from '../../react/features/settings';
 import {
     dockToolbox,
+    setToolboxEnabled,
     showToolbox
 } from '../../react/features/toolbox';
 
@@ -337,7 +336,12 @@ UI.start = function() {
     if (!interfaceConfig.filmStripOnly) {
         VideoLayout.initLargeVideo();
     }
-    VideoLayout.resizeVideoArea(true, true);
+
+    // Do not animate the video area on UI start (second argument passed into
+    // resizeVideoArea) because the animation is not visible anyway. Plus with
+    // the current dom layout, the quality label is part of the video layout and
+    // will be seen animating in.
+    VideoLayout.resizeVideoArea(true, false);
 
     sharedVideoManager = new SharedVideoManager(eventEmitter);
 
@@ -346,9 +350,20 @@ UI.start = function() {
         Filmstrip.setFilmstripOnly();
         APP.store.dispatch(setNotificationsEnabled(false));
     } else {
-        // Initialise the recording module.
-        config.enableRecording
-            && Recording.init(eventEmitter, config.recordingType);
+        // Initialize recording mode UI.
+        if (config.enableRecording && config.iAmRecorder) {
+            VideoLayout.enableDeviceAvailabilityIcons(
+                APP.conference.getMyUserId(), false);
+
+            // in case of iAmSipGateway keep local video visible
+            if (!config.iAmSipGateway) {
+                VideoLayout.setLocalVideoVisible(false);
+            }
+
+            APP.store.dispatch(setToolboxEnabled(false));
+            APP.store.dispatch(setNotificationsEnabled(false));
+            UI.messageHandler.enablePopups(false);
+        }
 
         // Initialize side panels
         SidePanels.init(eventEmitter);
@@ -471,18 +486,11 @@ UI.addUser = function(user) {
     const status = user.getStatus();
 
     if (status) {
-        // if user has initial status dispatch it
-        // and skip 'connected' notifications
-        APP.store.dispatch(participantPresenceChanged(id, status));
-
         // FIXME: move updateUserStatus in participantPresenceChanged action
         UI.updateUserStatus(user, status);
     } else {
         APP.store.dispatch(showParticipantJoinedNotification(displayName));
     }
-
-    // Add Peer's container
-    VideoLayout.addParticipantContainer(user);
 
     // Configure avatar
     UI.setUserEmail(id);
@@ -491,18 +499,6 @@ UI.addUser = function(user) {
     if (displayName) {
         UI.changeDisplayName(id, displayName);
     }
-};
-
-/**
- * Remove user from UI.
- * @param {string} id   user id
- * @param {string} displayName user nickname
- */
-UI.removeUser = function(id, displayName) {
-    messageHandler.participantNotification(
-        displayName, 'notify.somebody', 'disconnected', 'notify.disconnected');
-
-    VideoLayout.removeParticipantContainer(id);
 };
 
 /**
@@ -520,13 +516,9 @@ UI.onPeerVideoTypeChanged
 UI.updateLocalRole = isModerator => {
     VideoLayout.showModeratorIndicator();
 
-    if (isModerator) {
-        if (!interfaceConfig.DISABLE_FOCUS_INDICATOR) {
-            messageHandler.participantNotification(
-                null, 'notify.me', 'connected', 'notify.moderator');
-        }
-
-        Recording.checkAutoRecord();
+    if (isModerator && !interfaceConfig.DISABLE_FOCUS_INDICATOR) {
+        messageHandler.participantNotification(
+            null, 'notify.me', 'connected', 'notify.moderator');
     }
 };
 
@@ -815,25 +807,8 @@ UI.notifyInitiallyMuted = function() {
         null);
 };
 
-/**
- * Mark user as dominant speaker.
- * @param {string} id user id
- */
-UI.markDominantSpeaker = function(id) {
-    VideoLayout.onDominantSpeakerChanged(id);
-};
-
 UI.handleLastNEndpoints = function(leavingIds, enteringIds) {
     VideoLayout.onLastNEndpointsChanged(leavingIds, enteringIds);
-};
-
-/**
- * Will handle notification about participant's connectivity status change.
- *
- * @param {string} id the id of remote participant(MUC jid)
- */
-UI.participantConnectionStatusChanged = function(id) {
-    VideoLayout.onParticipantConnectionStatusChanged(id);
 };
 
 /**
@@ -879,10 +854,6 @@ UI.markVideoInterrupted = function(interrupted) {
 // eslint-disable-next-line max-params
 UI.addMessage = function(from, displayName, message, stamp) {
     Chat.updateChatConversation(from, displayName, message, stamp);
-};
-
-UI.updateRecordingState = function(state) {
-    Recording.updateRecordingState(state);
 };
 
 UI.notifyTokenAuthFailed = function() {
@@ -963,15 +934,6 @@ UI.getLargeVideoID = function() {
 UI.getLargeVideo = function() {
     return VideoLayout.getLargeVideo();
 };
-
-/**
- * Returns whether or not the passed in user id is currently pinned to the large
- * video.
- *
- * @param {string} userId - The id of the user to check is pinned or not.
- * @returns {boolean} True if the user is currently pinned to the large video.
- */
-UI.isPinned = userId => VideoLayout.getPinnedId() === userId;
 
 /**
  * Shows "Please go to chrome webstore to install the desktop sharing extension"

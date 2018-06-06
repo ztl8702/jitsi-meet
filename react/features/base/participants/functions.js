@@ -5,7 +5,8 @@ import { toState } from '../redux';
 
 import {
     DEFAULT_AVATAR_RELATIVE_PATH,
-    LOCAL_PARTICIPANT_DEFAULT_ID
+    LOCAL_PARTICIPANT_DEFAULT_ID,
+    PARTICIPANT_ROLE
 } from './constants';
 
 declare var config: Object;
@@ -126,9 +127,7 @@ export function getLocalParticipant(stateful: Object | Function) {
  * @private
  * @returns {(Participant|undefined)}
  */
-export function getParticipantById(
-        stateful: Object | Function,
-        id: string) {
+export function getParticipantById(stateful: Object | Function, id: string) {
     const participants = _getAllParticipants(stateful);
 
     return participants.find(p => p.id === id);
@@ -182,6 +181,28 @@ export function getParticipantDisplayName(
 }
 
 /**
+ * Returns the presence status of a participant associated with the passed id.
+ *
+ * @param {(Function|Object)} stateful - The (whole) redux state, or redux's
+ * {@code getState} function to be used to retrieve the state.
+ * @param {string} id - The id of the participant.
+ * @returns {string} - The presence status.
+ */
+export function getParticipantPresenceStatus(
+        stateful: Object | Function, id: string) {
+    if (!id) {
+        return undefined;
+    }
+    const participantById = getParticipantById(stateful, id);
+
+    if (!participantById) {
+        return undefined;
+    }
+
+    return participantById.presence;
+}
+
+/**
  * Selectors for getting all known participants with fake participants filtered
  * out.
  *
@@ -223,4 +244,26 @@ function _getAllParticipants(stateful) {
         Array.isArray(stateful)
             ? stateful
             : toState(stateful)['features/base/participants'] || []);
+}
+
+/**
+ * Returns true if the current local participant is a moderator in the
+ * conference.
+ *
+ * @param {Object|Function} stateful - Object or function that can be resolved
+ * to the Redux state.
+ * @returns {boolean}
+ */
+export function isLocalParticipantModerator(stateful: Object | Function) {
+    const state = toState(stateful);
+    const localParticipant = getLocalParticipant(state);
+
+    if (!localParticipant) {
+        return false;
+    }
+
+    return (
+        localParticipant.role === PARTICIPANT_ROLE.MODERATOR
+            && (!state['features/base/config'].enableUserRolesBasedOnToken
+                || !state['features/base/jwt'].isGuest));
 }
