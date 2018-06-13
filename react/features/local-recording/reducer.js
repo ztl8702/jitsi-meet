@@ -1,39 +1,32 @@
 import { ReducerRegistry } from '../base/redux';
 
 import {
-    LOCAL_RECORDING_TOGGLE, CLOCK_TICK
+    LOCAL_RECORDING_OFF, CLOCK_TICK, LOCAL_RECORDING_ON, LOCAL_RECORDING_TOGGLE_DIALOG
 } from './actionTypes';
-import { RecordingController } from './recording';
 
 
 ReducerRegistry.register('features/local-recording', (state = {}, action) => {
     console.log(state);
     switch (action.type) {
-    case LOCAL_RECORDING_TOGGLE: {
-        const oldOnOffState = state.on;
-        const newOnOffState = oldOnOffState === null ? true : !oldOnOffState;
-
-        if (newOnOffState) {
-            startRecording();
-
-            return {
-                ...state,
-                on: newOnOffState,
-                recordingStartedAt: new Date(Date.now()),
-                encodingFormat: 'flac'
-            };
-        } else {
-            stopRecording();
-
-            return {
-                ...state,
-                on: newOnOffState,
-                recordingStartedAt: null
-            };
-        }
-
-        
+    case LOCAL_RECORDING_ON: {
+        return {
+            ...state,
+            on: true,
+            recordingStartedAt: new Date(Date.now()),
+            encodingFormat: LocalRecording.controller._format
+        };
     }
+    case LOCAL_RECORDING_OFF: 
+        return {
+            ...state,
+            on: false,
+            recordingStartedAt: null
+        };
+    case LOCAL_RECORDING_TOGGLE_DIALOG:
+        return {
+            ...state,
+            showDialog: state.showDialog === null || state.showDialog === false
+        };
     case CLOCK_TICK:
         return {
             ...state,
@@ -44,24 +37,4 @@ ReducerRegistry.register('features/local-recording', (state = {}, action) => {
     }
 });
 
-const recordingController = new RecordingController();
-
-/**
- * Starts MediaRecorder.
- *
- * @returns {void}
- */
-function startRecording() {
-    recordingController.startRecording();
-}
-
-/**
- * Stops MediaRecorder.
- *
- * @returns {undefined}
- */
-function stopRecording() {
-    recordingController.stopRecording().then(
-        () => recordingController.downloadRecordedData());
-}
 

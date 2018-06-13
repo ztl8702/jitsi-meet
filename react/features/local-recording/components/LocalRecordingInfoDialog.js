@@ -28,7 +28,7 @@ class LocalRecordingInfoDialog extends Component {
          *
          */
         audioFileSize: PropTypes.number,
-
+        isOn: PropTypes.bool,
         currentTime: PropTypes.object,
         encodingFormat: PropTypes.string,
         isModerator: PropTypes.bool,
@@ -53,7 +53,7 @@ class LocalRecordingInfoDialog extends Component {
      */
     constructor(props) {
         super(props);
-        
+
         this.componentWillMount = this.componentWillMount.bind(this);
         this.componentWillUnmount = this.componentWillUnmount.bind(this);
     }
@@ -61,7 +61,7 @@ class LocalRecordingInfoDialog extends Component {
 
     componentWillMount() {
         this._timer = setInterval(
-            function() {
+            function () {
                 this.props.dispatch(clockTick())
             }.bind(this),
             1000
@@ -80,55 +80,75 @@ class LocalRecordingInfoDialog extends Component {
      * @returns {ReactElement}
      */
     render() {
-        const { isModerator, recordingStartedAt, currentTime, encodingFormat } = this.props;
+        const { isModerator, recordingStartedAt, currentTime, encodingFormat, isOn } = this.props;
 
         return (
             <div
-                className = 'info-dialog' >
-                <div className = 'info-dialog-column'>
-                    <h4 className = 'info-dialog-icon'>
-                        <i className = 'icon-info' />
+                className='info-dialog' >
+                <div className='info-dialog-column'>
+                    <h4 className='info-dialog-icon'>
+                        <i className='icon-info' />
                     </h4>
                 </div>
-                <div className = 'info-dialog-column'>
-                    <div className = 'info-dialog-title'>
+                <div className='info-dialog-column'>
+                    <div className='info-dialog-title'>
                         Local Recording
                     </div>
-                    <div className = 'info-dialog-conference-url'>
-                        <span className = 'info-label'>
+                    <div className='info-dialog-conference-url'>
+                        <span className='info-label'>
                             Moderator:
                         </span>
-                        <span className = 'spacer'>&nbsp;</span>
-                        <span className = 'info-value'>
-                            { isModerator ? 'Yes' : 'No' }
+                        <span className='spacer'>&nbsp;</span>
+                        <span className='info-value'>
+                            {isModerator ? 'Yes' : 'No'}
                         </span>
                     </div>
-                    <div className = 'info-dialog-conference-url'>
-                        <span className = 'info-label'>
-                            Duration:
-                        </span>
-                        <span className = 'spacer'>&nbsp;</span>
-                        <span className = 'info-value'>
-                            { this._getDuration(currentTime, recordingStartedAt) }
-                        </span>
-                    </div>
-                    <div className = 'info-dialog-conference-url'>
-                        <span className = 'info-label'>
+                    { isOn && (
+                        <div className='info-dialog-conference-url'>
+                            <span className='info-label'>
+                                Duration:
+                            </span>
+                            <span className='spacer'>&nbsp;</span>
+                            <span className='info-value'>
+                                {this._getDuration(currentTime, recordingStartedAt)}
+                            </span>
+                        </div>)
+                    }
+                    {isOn && (
+                    <div className='info-dialog-conference-url'>
+                        <span className='info-label'>
                             Encoding:
                         </span>
-                        <span className = 'spacer'>&nbsp;</span>
-                        <span className = 'info-value'>
-                            { encodingFormat }
+                        <span className='spacer'>&nbsp;</span>
+                        <span className='info-value'>
+                            {encodingFormat}
                         </span>
-                    </div>
-                    <div className = 'info-dialog-action-links'>
-                        <div className = 'info-dialog-action-link'>
-                            <a
-                                className = 'info-copy'>
-                                { 'test' }
-                            </a>
-                        </div>
-                    </div>
+                    </div>)
+                    }
+                    {
+                        isModerator && (
+                            <div className='info-dialog-action-links'>
+                                <div className='info-dialog-action-link'>
+                                    {isOn ? (
+                                        <a
+                                            className='info-copy'
+                                            onClick = {this._onStop }>
+                                            {'Stop'}
+                                        </a>)
+                                        : (
+                                            <a
+                                                className='info-copy'
+                                                onClick = {this._onStart}>
+                                                {'Start'}
+                                            </a>
+                                        )
+                                    }
+
+                                </div>
+                            </div>
+                        )
+                    }
+
                 </div>
 
             </div>
@@ -168,6 +188,14 @@ class LocalRecordingInfoDialog extends Component {
 
     }
 
+    _onStart() {
+        LocalRecording.signalStart();
+    }
+
+    _onStop() {
+        LocalRecording.signalEnd();
+    }
+
 }
 
 /**
@@ -189,12 +217,14 @@ function _mapStateToProps(state) {
     const {
         currentTime,
         recordingStartedAt,
-        encodingFormat
+        encodingFormat,
+        on: isOn
     } = state['features/local-recording'];
     const isModerator
         = getLocalParticipant(state).role === PARTICIPANT_ROLE.MODERATOR;
 
     return {
+        isOn,
         isModerator,
         currentTime,
         recordingStartedAt,

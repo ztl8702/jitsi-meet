@@ -2,6 +2,15 @@
  * Common interface for recording mechanisms
  */
 export class RecordingDelegate {
+
+    /**
+     * Initialize the recording backend.
+     *
+     * @returns {Promise}
+     */
+    ensureInitialize() {
+        throw new Error('Not implemented');
+    }
     /**
      * Starts recording.
      *

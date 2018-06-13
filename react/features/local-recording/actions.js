@@ -1,6 +1,8 @@
 import {
-    LOCAL_RECORDING_TOGGLE,
-    CLOCK_TICK
+    LOCAL_RECORDING_ON,
+    LOCAL_RECORDING_OFF,
+    CLOCK_TICK,
+    LOCAL_RECORDING_TOGGLE_DIALOG
 } from './actionTypes';
 
 /**
@@ -10,9 +12,15 @@ import {
  *     type: LOCAL_RECORDING_TOGGLE
  * }}
  */
-export function toggleRecording() {
+export function toggleRecording(on) {
     return {
-        type: LOCAL_RECORDING_TOGGLE
+        type: on ? LOCAL_RECORDING_ON : LOCAL_RECORDING_OFF
+    };
+}
+
+export function toggleDialog() {
+    return {
+        type: LOCAL_RECORDING_TOGGLE_DIALOG
     };
 }
 
