@@ -1,8 +1,8 @@
 import {
-    RecordingDelegate,
     RecordingDelegateOgg,
     RecordingDelegateFlac,
-    RecordingDelegateWav } from '../recording';
+    RecordingDelegateWav 
+} from '../recording';
 
 
 const COMMAND_START = 'localRecStart';
@@ -10,7 +10,7 @@ const COMMAND_STOP = 'localRecStop';
 const COMMAND_CHANGE_CONFIG = 'localRecConfig';
 const COMMAND_CLIENT_UPDATE = 'localRecClientUpdate';
 
-const DEFAULT_RECORDING_FORMAT = 'wav';
+const DEFAULT_RECORDING_FORMAT = 'flac';
 
 
 const ControllerState = Object.freeze({
@@ -37,9 +37,7 @@ export class RecordingController {
     /**
      * Constructor.
      */
-    constructor(conference) {
-        this._conference = conference;
-
+    constructor() {
         this._onStartCommand = this._onStartCommand.bind(this);
         this._onStopCommand = this._onStopCommand.bind(this);
         this._doStartRecording = this._doStartRecording.bind(this);
@@ -127,55 +125,77 @@ export class RecordingController {
     switchFormat(newFormat) {
         this._format = newFormat;
         console.log(`Recording format switched to ${newFormat}`);
+
         // will be used next time
     }
 
+    /**
+     * Callback function for XMPP event.
+     *
+     * @private
+     * @param {*} value - The event args.
+     * @returns {void}
+     */
     _onStartCommand(value) {
         const { sessionToken, format } = value.attributes;
+
         if (this._state === ControllerState.IDLE) {
             this._format = format;
             this._currentSessionToken = sessionToken;
             this._delegates[sessionToken] =
                 this._createRecordingDelegate();
             this._doStartRecording();
-        } else {
-            if (this._currentSessionToken !== sessionToken) {
-                // we need to restart the recording
-                this._doStopRecording().then(()=> {
-                    this._format = format;
-                    this._currentSessionToken = sessionToken;
-                    this._delegates[sessionToken] =
-                        this._createRecordingDelegate();
-                    this._doStartRecording();
-                });
-            }
+        } else if (this._currentSessionToken !== sessionToken) {
+            // we need to restart the recording
+            this._doStopRecording().then(() => {
+                this._format = format;
+                this._currentSessionToken = sessionToken;
+                this._delegates[sessionToken] =
+                    this._createRecordingDelegate();
+                this._doStartRecording();
+            });
         }
     }
 
+    /**
+     * Callback function for XMPP event.
+     *
+     * @private
+     * @param {*} value - The event args.
+     * @returns {void}
+     */
     _onStopCommand(value) {
         if (this._state === ControllerState.RECORDING) {
             this._doStopRecording();
         }
     }
 
+    /**
+     * Generates a token that can be used to distinguish each
+     * recording session.
+     *
+     * @returns {number}
+     */
     _getRandomToken() {
         return Math.floor(Math.random() * 10000) + 1;
     }
 
-        /**
+    /**
      * Starts the recording.
      *
+     * @private
      * @returns {void}
      */
     _doStartRecording() {
         if (this._state === ControllerState.IDLE) {
             this._state = ControllerState.RECORDING;
             const delegate = this._delegates[this._currentSessionToken];
-            
+
             delegate.ensureInitialized()
             .then(() => delegate.start())
             .then(() => {
                 console.log('Recording starts');
+                this.onNotify('Local recording started.');
                 if (this.onStateChanged) {
                     this.onStateChanged(true);
                 }
@@ -187,19 +207,21 @@ export class RecordingController {
     /**
      * Stops the recording.
      *
+     * @private
      * @returns {Promise}
      */
     _doStopRecording() {
         if (this._state === ControllerState.RECORDING) {
             const token = this._currentSessionToken;
+
             return this._delegates[this._currentSessionToken]
                 .stop()
                 .then(() => {
                     this._state = ControllerState.IDLE;
                     console.log('Recording stopped.');
                     this.downloadRecordedData(token);
-                    this.onNotify(`Recording session ${token} finished.`
-                    +'Please send the recorded file to the moderator.');
+                    this.onNotify(`Recording session ${token} finished. `
+                        + 'Please send the recorded file to the moderator.');
                     if (this.onStateChanged) {
                         this.onStateChanged(false);
                     }
@@ -210,8 +232,15 @@ export class RecordingController {
 
     }
 
+    /**
+     * Creates recording delegate according to the current format.
+     *
+     * @private
+     * @returns {RecordingDelegate}
+     */
     _createRecordingDelegate() {
         console.log('RecordingController: format =', this._format);
+
         switch (this._format) {
         case 'ogg':
             return new RecordingDelegateOgg();
