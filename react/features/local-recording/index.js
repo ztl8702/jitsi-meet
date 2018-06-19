@@ -5,7 +5,7 @@ export * from './controller';
 
 import { RecordingController } from './controller';
 
-const recordingController = new RecordingController(null);
+const recordingController = new RecordingController();
 
 window.LocalRecording = {
     signalStart: recordingController.startRecording.bind(recordingController),
