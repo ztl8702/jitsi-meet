@@ -19,7 +19,7 @@ export class RecordingDelegateFlac extends RecordingDelegate {
      */
     constructor() {
         super();
-        this._encoder = new Worker('/libs/flacEncodeWorker.js');
+        this._encoder = new Worker('/libs/flacEncodeWorker.min.js');
         this._encoder.onmessage = e => {
             if (e.data.command === 'end') {
                 // receiving blob
