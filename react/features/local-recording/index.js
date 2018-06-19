@@ -13,12 +13,12 @@ const setupController = () => {
     recordingController = new RecordingController(null);
 
     window.LocalRecording = {
-        signalStart : startRecording,
-        signalEnd : stopRecording,
-        controller : recordingController
+        signalStart: startRecording,
+        signalEnd: stopRecording,
+        controller: recordingController
     };
-
 };
+
 setupController();
 
 window.onload = () => {
