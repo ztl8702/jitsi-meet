@@ -3,43 +3,15 @@ export * from './actionTypes';
 export * from './components';
 export * from './controller';
 
-import './reducer';
-
 import { RecordingController } from './controller';
 
-let recordingController = null;
+const recordingController = new RecordingController(null);
 
-const setupController = () => {
-    recordingController = new RecordingController(null);
-
-    window.LocalRecording = {
-        signalStart: startRecording,
-        signalEnd: stopRecording,
-        controller: recordingController
-    };
+window.LocalRecording = {
+    signalStart: recordingController.startRecording.bind(recordingController),
+    signalEnd: recordingController.stopRecording.bind(recordingController),
+    controller: recordingController
 };
 
-setupController();
-
-window.onload = () => {
-    recordingController.registerEvents();
-};
-
-/**
- * Starts MediaRecorder.
- *
- * @returns {void}
- */
-function startRecording() {
-    if (!recordingController) setupController();
-    recordingController.startRecording();
-}
-
-/**
- * Stops MediaRecorder.
- *
- * @returns {undefined}
- */
-function stopRecording() {
-    recordingController.stopRecording();
-}
+import './middleware';
+import './reducer';

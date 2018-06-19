@@ -18,6 +18,8 @@ const ControllerState = Object.freeze({
     RECORDING: Symbol('recording')
 });
 
+declare var APP: object;
+
 /**
  * Recoding coordination, across multiple participants
  */
@@ -54,7 +56,7 @@ export class RecordingController {
     registerEvents() {
         if (!this._registered) {
             this._conference = APP.conference;
-            if (this._conference != null) {
+            if (this._conference !== null) {
                 this._conference.commands.addCommandListener(COMMAND_START, this._onStartCommand);
                 this._conference.commands.addCommandListener(COMMAND_STOP, this._onStopCommand);
                 this._registered = true;

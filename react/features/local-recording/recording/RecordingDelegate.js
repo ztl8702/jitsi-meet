@@ -8,9 +8,10 @@ export class RecordingDelegate {
      *
      * @returns {Promise}
      */
-    ensureInitialize() {
+    ensureInitialized() {
         throw new Error('Not implemented');
     }
+
     /**
      * Starts recording.
      *
