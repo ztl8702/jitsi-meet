@@ -39,8 +39,12 @@
     box-sizing: border-box;
     display: flex;
     justify-content: space-between;
+    left: 0;
+    margin-left: auto;
+    margin-right: auto;
     padding: 12px 8px;
     position: absolute;
+    right: 0;
     transition: bottom .3s ease-in;
     width: 100%;
     z-index: $toolbarZ;
@@ -91,7 +95,13 @@
     }
 
     i.disabled {
-        cursor: initial
+        cursor: initial;
+        color: #3b475c;
+    }
+
+    .disabled i {
+        cursor: initial;
+        color: #3b475c;
     }
 
     i.disabled:hover {
@@ -130,6 +140,10 @@
             }
             &.unclickable:hover {
                 background: inherit;
+            }
+            &.disabled {
+                cursor: initial;
+                color: #3b475c;
             }
         }
 

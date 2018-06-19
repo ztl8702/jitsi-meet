@@ -21,7 +21,6 @@ import {
     MEDIA_TYPE,
     SET_AUDIO_MUTED,
     SET_VIDEO_MUTED,
-    VIDEO_MUTISM_AUTHORITY,
     isVideoMutedByAudioOnly,
     setAudioMuted
 } from '../../base/media';
@@ -227,15 +226,16 @@ function _conferenceWillJoin({ getState }, next, action) {
 
     const { conference } = action;
     const state = getState();
-    const { callUUID } = state['features/base/config'];
+    const { callHandle, callUUID } = state['features/base/config'];
     const url = getInviteURL(state);
+    const handle = callHandle || url.toString();
     const hasVideo = !isVideoMutedByAudioOnly(state);
 
     // When assigning the call UUID, do so in upper case, since iOS will return
     // it upper cased.
     conference.callUUID = (callUUID || uuid.v4()).toUpperCase();
 
-    CallKit.startCall(conference.callUUID, url.toString(), hasVideo)
+    CallKit.startCall(conference.callUUID, handle, hasVideo)
         .then(() => {
             const { callee } = state['features/base/jwt'];
             const displayName
@@ -296,8 +296,7 @@ function _onPerformSetMutedCallAction({ callUUID, muted: newValue }) {
             const value = Boolean(newValue);
 
             sendAnalytics(createTrackMutedEvent('audio', 'callkit', value));
-            dispatch(setAudioMuted(
-                value, VIDEO_MUTISM_AUTHORITY.USER, /* ensureTrack */ true));
+            dispatch(setAudioMuted(value, /* ensureTrack */ true));
         }
     }
 }

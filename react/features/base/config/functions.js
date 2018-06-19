@@ -44,6 +44,20 @@ const WHITELISTED_KEYS = [
     'callDisplayName',
 
     /**
+     * The handle
+     * ({@link https://developer.apple.com/documentation/callkit/cxhandle}) of
+     * the CallKit call representing the conference/meeting associated with this
+     * config.js. The property is meant for use cases in which the room URL is
+     * not desirable as the handle for CallKit purposes. As the value is
+     * associated with a conference/meeting, the value makes sense not as a
+     * deployment-wide configuration, only as a runtime configuration
+     * override/overwrite provided by, for example, Jitsi Meet SDK for iOS.
+     *
+     * @type string
+     */
+    'callHandle',
+
+    /**
      * The UUID of the CallKit call representing the conference/meeting
      * associated with this config.js. The property is meant for use cases in
      * which Jitsi Meet is to work with a CallKit call created outside of Jitsi
@@ -75,8 +89,6 @@ const WHITELISTED_KEYS = [
     'disableAGC',
     'disableAP',
     'disableAudioLevels',
-    'disableDesktopSharing',
-    'disableDesktopSharing',
     'disableH264',
     'disableHPF',
     'disableNS',
@@ -85,16 +97,16 @@ const WHITELISTED_KEYS = [
     'disableSuspendVideo',
     'displayJids',
     'enableDisplayNameInStats',
+    'enableLayerSuspension',
     'enableLipSync',
     'enableLocalVideoFlip',
-    'enableRecording',
     'enableRemb',
     'enableStatsID',
     'enableTalkWhileMuted',
     'enableTcc',
-    'enableUserRolesBasedOnToken',
     'etherpad_base',
     'failICE',
+    'fileRecordingsEnabled',
     'firefox_fake_device',
     'forceJVB121Ratio',
     'gatherStats',
@@ -105,12 +117,12 @@ const WHITELISTED_KEYS = [
     'iAmSipGateway',
     'iceTransportPolicy',
     'ignoreStartMuted',
+    'liveStreamingEnabled',
     'minParticipants',
     'nick',
     'openBridgeChannel',
     'p2p',
     'preferH264',
-    'recordingType',
     'requireDisplayName',
     'resolution',
     'startAudioMuted',

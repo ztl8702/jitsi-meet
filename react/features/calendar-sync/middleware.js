@@ -1,5 +1,6 @@
 // @flow
 
+import md5 from 'js-md5';
 import RNCalendarEvents from 'react-native-calendar-events';
 
 import { APP_WILL_MOUNT } from '../app';
@@ -253,7 +254,11 @@ function _parseCalendarEntry(event, knownDomains) {
 }
 
 /**
- * Updates the calendar entries in redux when new list is received.
+ * Updates the calendar entries in redux when new list is received. The feature
+ * calendar-sync doesn't display all calendar events, it displays unique
+ * title, URL, and start time tuples i.e. it doesn't display subsequent
+ * occurrences of recurring events, and the repetitions of events coming from
+ * multiple calendars.
  *
  * XXX The function's {@code this} is the redux store.
  *
@@ -262,27 +267,58 @@ function _parseCalendarEntry(event, knownDomains) {
  * @returns {void}
  */
 function _updateCalendarEntries(events) {
-    if (events && events.length) {
-        // eslint-disable-next-line no-invalid-this
-        const { dispatch, getState } = this;
-
-        const knownDomains = getState()['features/base/known-domains'];
-        const eventList = [];
-
-        const now = Date.now();
-
-        for (const event of events) {
-            const calendarEntry = _parseCalendarEntry(event, knownDomains);
-
-            calendarEntry
-                && calendarEntry.endDate > now
-                && eventList.push(calendarEntry);
-        }
-
-        dispatch(
-            setCalendarEvents(
-                eventList
-                    .sort((a, b) => a.startDate - b.startDate)
-                    .slice(0, MAX_LIST_LENGTH)));
+    if (!events || !events.length) {
+        return;
     }
+
+    // eslint-disable-next-line no-invalid-this
+    const { dispatch, getState } = this;
+    const knownDomains = getState()['features/base/known-domains'];
+    const now = Date.now();
+    const entryMap = new Map();
+
+    for (const event of events) {
+        const entry = _parseCalendarEntry(event, knownDomains);
+
+        if (entry && entry.endDate > now) {
+            // As was stated above, we don't display subsequent occurrences of
+            // recurring events, and the repetitions of events coming from
+            // multiple calendars.
+            const key = md5.hex(JSON.stringify([
+
+                // Obviously, we want to display different conference/meetings
+                // URLs. URLs are the very reason why we implemented the feature
+                // calendar-sync in the first place.
+                entry.url,
+
+                // We probably want to display one and the same URL to people if
+                // they have it under different titles in their Calendar.
+                // Because maybe they remember the title of the meeting, not the
+                // URL so they expect to see the title without realizing that
+                // they have the same URL already under a different title.
+                entry.title,
+
+                // XXX Eventually, given that the URL and the title are the
+                // same, what sets one event apart from another is the start
+                // time of the day (note the use of toTimeString() bellow)! The
+                // day itself is not important because we don't want multiple
+                // occurrences of a recurring event or repetitions of an even
+                // from multiple calendars.
+                new Date(entry.startDate).toTimeString()
+            ]));
+            const existingEntry = entryMap.get(key);
+
+            // We want only the earliest occurrence (which hasn't ended in the
+            // past, that is) of a recurring event.
+            if (!existingEntry || existingEntry.startDate > entry.startDate) {
+                entryMap.set(key, entry);
+            }
+        }
+    }
+
+    dispatch(
+        setCalendarEvents(
+            Array.from(entryMap.values())
+                .sort((a, b) => a.startDate - b.startDate)
+                .slice(0, MAX_LIST_LENGTH)));
 }

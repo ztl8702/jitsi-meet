@@ -114,6 +114,11 @@ var config = {
     // Enable / disable simulcast support.
     // disableSimulcast: false,
 
+    // Enable / disable layer suspension.  If enabled, endpoints whose HD
+    // layers are not in use will be suspended (no longer sent) until they
+    // are requested again.
+    // enableLayerSuspension: false,
+
     // Suspend sending video if bandwidth estimation is too low. This may cause
     // problems with audio playback. Disabled until these are fixed.
     disableSuspendVideo: true,
@@ -136,9 +141,6 @@ var config = {
     // disableH264: false,
 
     // Desktop sharing
-
-    // Enable / disable desktop sharing
-    // disableDesktopSharing: false,
 
     // The ID of the jidesha extension for Chrome.
     desktopSharingChromeExtId: null,
@@ -167,11 +169,11 @@ var config = {
 
     // Recording
 
-    // Whether to enable recording or not.
-    // enableRecording: false,
+    // Whether to enable file recording or not.
+    // fileRecordingsEnabled: false,
 
-    // Type for recording: one of jibri or jirecon.
-    // recordingType: 'jibri',
+    // Whether to enable live streaming or not.
+    // liveStreamingEnabled: false,
 
     // Misc
 
@@ -242,6 +244,9 @@ var config = {
     // with token will be considered non-guests. Only guests will be allowed to
     // edit their profile.
     enableUserRolesBasedOnToken: false,
+
+    // Whether or not some features are checked based on token.
+    // enableFeaturesBasedOnToken: false,
 
     // Message to show the users. Example: 'The service will be down for
     // maintenance at 01:00 AM GMT,

@@ -255,10 +255,11 @@ class Conference extends Component<Props> {
                     <Filmstrip />
 
                     {/*
-                      * A container that automatically renders indicators such
-                      * as VideoQualityLabel or RecordingLabel if need be.
-                      */}
-                    <ConferenceIndicators />
+                      * Examples of conference indicators are VideoQualityLabel
+                      * and RecordingLabel.
+                      */
+                        this.props._reducedUI || <ConferenceIndicators />
+                    }
                 </View>
                 <TestConnectionInfo />
 

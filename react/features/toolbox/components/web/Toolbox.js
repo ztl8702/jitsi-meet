@@ -13,8 +13,9 @@ import { openDialog } from '../../../base/dialog';
 import { translate } from '../../../base/i18n';
 import { JitsiRecordingConstants } from '../../../base/lib-jitsi-meet';
 import {
-    PARTICIPANT_ROLE,
     getLocalParticipant,
+    getParticipants,
+    isLocalParticipantModerator,
     participantUpdated
 } from '../../../base/participants';
 import { getLocalVideoTrack, toggleScreensharing } from '../../../base/tracks';
@@ -74,9 +75,10 @@ type Props = {
     _conference: Object,
 
     /**
-     * Whether or not desktopsharing was explicitly configured to be disabled.
+     * The tooltip key to use when screensharing is disabled. Or undefined
+     * if non to be shown and the button to be hidden.
      */
-    _desktopSharingDisabledByConfig: boolean,
+    _desktopSharingDisabledTooltipKey: boolean,
 
     /**
      * Whether or not screensharing is initialized.
@@ -104,6 +106,17 @@ type Props = {
     _feedbackConfigured: boolean,
 
     /**
+     * The tooltip key to use when file recording is disabled. Or undefined
+     * if non to be shown and the button to be hidden.
+     */
+    _fileRecordingsDisabledTooltipKey: boolean,
+
+    /**
+     * Whether or not the file recording feature is enabled for use.
+     */
+    _fileRecordingsEnabled: boolean,
+
+    /**
      * The current file recording session, if any.
      */
     _fileRecordingSession: Object,
@@ -125,6 +138,17 @@ type Props = {
     _isGuest: boolean,
 
     /**
+     * The tooltip key to use when live streaming is disabled. Or undefined
+     * if non to be shown and the button to be hidden.
+     */
+    _liveStreamingDisabledTooltipKey: boolean,
+
+    /**
+     * Whether or not the live streaming feature is enabled for use.
+     */
+    _liveStreamingEnabled: boolean,
+
+    /**
      * The current live streaming session, if any.
      */
     _liveStreamingSession: ?Object,
@@ -143,11 +167,6 @@ type Props = {
      * Whether or not the local participant's hand is raised.
      */
     _raisedHand: boolean,
-
-    /**
-     * Whether or not the recording feature is enabled for use.
-     */
-    _recordingEnabled: boolean,
 
     /**
      * Whether or not the local participant is screensharing.
@@ -331,6 +350,7 @@ class Toolbox extends Component<Props> {
         const overflowMenuContent = this._renderOverflowMenuContent();
         const overflowHasItems = Boolean(overflowMenuContent.filter(
             child => child).length);
+        const toolbarAccLabel = 'toolbar.accessibilityLabel.moreActionsMenu';
 
         return (
             <div
@@ -343,7 +363,8 @@ class Toolbox extends Component<Props> {
                         && this._renderDesktopSharingButton() }
                     { this._shouldShowButton('raisehand')
                         && <ToolbarButton
-                            accessibilityLabel = 'Raised hand'
+                            accessibilityLabel =
+                                { t('toolbar.accessibilityLabel.raiseHand') }
                             iconName = { _raisedHand
                                 ? 'icon-raised-hand toggled'
                                 : 'icon-raised-hand' }
@@ -352,7 +373,8 @@ class Toolbox extends Component<Props> {
                     { this._shouldShowButton('chat')
                         && <div className = 'toolbar-button-with-badge'>
                             <ToolbarButton
-                                accessibilityLabel = 'Chat'
+                                accessibilityLabel =
+                                    { t('toolbar.accessibilityLabel.chat') }
                                 iconName = { _chatOpen
                                     ? 'icon-chat toggled'
                                     : 'icon-chat' }
@@ -373,7 +395,8 @@ class Toolbox extends Component<Props> {
                     { this._shouldShowButton('invite')
                         && !_hideInviteButton
                         && <ToolbarButton
-                            accessibilityLabel = 'Invite'
+                            accessibilityLabel =
+                                { t('toolbar.accessibilityLabel.invite') }
                             iconName = 'icon-add'
                             onClick = { this._onToolbarOpenInvite }
                             tooltip = { t('toolbar.invite') } /> }
@@ -383,7 +406,7 @@ class Toolbox extends Component<Props> {
                             isOpen = { _overflowMenuVisible }
                             onVisibilityChange = { this._onSetOverflowVisible }>
                             <ul
-                                aria-label = 'Overflow menu'
+                                aria-label = { t(toolbarAccLabel) }
                                 className = 'overflow-menu'>
                                 { overflowMenuContent }
                             </ul>
@@ -916,17 +939,14 @@ class Toolbox extends Component<Props> {
      */
     _renderDesktopSharingButton() {
         const {
-            _desktopSharingDisabledByConfig,
             _desktopSharingEnabled,
+            _desktopSharingDisabledTooltipKey,
             _screensharing,
             t
         } = this.props;
 
-        const disabledTooltipText
-            = interfaceConfig.DESKTOP_SHARING_BUTTON_DISABLED_TOOLTIP;
-        const showDisabledTooltip
-            = disabledTooltipText && _desktopSharingDisabledByConfig;
-        const visible = _desktopSharingEnabled || showDisabledTooltip;
+        const visible
+            = _desktopSharingEnabled || _desktopSharingDisabledTooltipKey;
 
         if (!visible) {
             return null;
@@ -935,13 +955,14 @@ class Toolbox extends Component<Props> {
         const classNames = `icon-share-desktop ${
             _screensharing ? 'toggled' : ''} ${
             _desktopSharingEnabled ? '' : 'disabled'}`;
-        const tooltip = showDisabledTooltip
-            ? disabledTooltipText
-            : t('dialog.shareYourScreen');
+        const tooltip = t(
+            _desktopSharingEnabled
+                ? 'dialog.shareYourScreen' : _desktopSharingDisabledTooltipKey);
 
         return (
             <ToolbarButton
-                accessibilityLabel = 'Screenshare'
+                accessibilityLabel
+                    = { t('toolbar.accessibilityLabel.shareYourScreen') }
                 iconName = { classNames }
                 onClick = { this._onToolbarToggleScreenshare }
                 tooltip = { tooltip } />
@@ -959,10 +980,13 @@ class Toolbox extends Component<Props> {
             _editingDocument,
             _etherpadInitialized,
             _feedbackConfigured,
+            _fileRecordingsDisabledTooltipKey,
+            _fileRecordingsEnabled,
             _fullScreen,
             _isGuest,
+            _liveStreamingDisabledTooltipKey,
+            _liveStreamingEnabled,
             _liveStreamingSession,
-            _recordingEnabled,
             _sharingVideo,
             t
         } = this.props;
@@ -979,7 +1003,8 @@ class Toolbox extends Component<Props> {
                     onClick = { this._onToolbarOpenVideoQuality } />,
             this._shouldShowButton('fullscreen')
                 && <OverflowMenuItem
-                    accessibilityLabel = 'Full screen'
+                    accessibilityLabel =
+                        { t('toolbar.accessibilityLabel.fullScreen') }
                     icon = { _fullScreen
                         ? 'icon-exit-full-screen'
                         : 'icon-full-screen' }
@@ -988,18 +1013,21 @@ class Toolbox extends Component<Props> {
                     text = { _fullScreen
                         ? t('toolbar.exitFullScreen')
                         : t('toolbar.enterFullScreen') } />,
-            _recordingEnabled
+            (_liveStreamingEnabled || _liveStreamingDisabledTooltipKey)
                 && this._shouldShowButton('livestreaming')
                 && <OverflowMenuLiveStreamingItem
+                    disabled = { !_liveStreamingEnabled }
                     key = 'livestreaming'
                     onClick = { this._onToolbarToggleLiveStreaming }
-                    session = { _liveStreamingSession } />,
-            _recordingEnabled
+                    session = { _liveStreamingSession }
+                    tooltip = { t(_liveStreamingDisabledTooltipKey) } />,
+            (_fileRecordingsEnabled || _fileRecordingsDisabledTooltipKey)
                 && this._shouldShowButton('recording')
                 && this._renderRecordingButton(),
             this._shouldShowButton('sharedvideo')
                 && <OverflowMenuItem
-                    accessibilityLabel = 'Shared video'
+                    accessibilityLabel =
+                        { t('toolbar.accessibilityLabel.sharedvideo') }
                     icon = 'icon-shared-video'
                     key = 'sharedvideo'
                     onClick = { this._onToolbarToggleSharedVideo }
@@ -1009,7 +1037,8 @@ class Toolbox extends Component<Props> {
             this._shouldShowButton('etherpad')
                 && _etherpadInitialized
                 && <OverflowMenuItem
-                    accessibilityLabel = 'Etherpad'
+                    accessibilityLabel =
+                        { t('toolbar.accessibilityLabel.document') }
                     icon = 'icon-share-doc'
                     key = 'etherpad'
                     onClick = { this._onToolbarToggleEtherpad }
@@ -1022,7 +1051,8 @@ class Toolbox extends Component<Props> {
                 visible = { this._shouldShowButton('settings') } />,
             this._shouldShowButton('stats')
                 && <OverflowMenuItem
-                    accessibilityLabel = 'Speaker stats'
+                    accessibilityLabel =
+                        { t('toolbar.accessibilityLabel.speakerStats') }
                     icon = 'icon-presentation'
                     key = 'stats'
                     onClick = { this._onToolbarOpenSpeakerStats }
@@ -1030,14 +1060,16 @@ class Toolbox extends Component<Props> {
             this._shouldShowButton('feedback')
                 && _feedbackConfigured
                 && <OverflowMenuItem
-                    accessibilityLabel = 'Feedback'
+                    accessibilityLabel =
+                        { t('toolbar.accessibilityLabel.feedback') }
                     icon = 'icon-feedback'
                     key = 'feedback'
                     onClick = { this._onToolbarOpenFeedback }
                     text = { t('toolbar.feedback') } />,
             this._shouldShowButton('shortcuts')
                 && <OverflowMenuItem
-                    accessibilityLabel = 'Shortcuts'
+                    accessibilityLabel =
+                        { t('toolbar.accessibilityLabel.shortcuts') }
                     icon = 'icon-open_in_new'
                     key = 'shortcuts'
                     onClick = { this._onToolbarOpenKeyboardShortcuts }
@@ -1053,7 +1085,11 @@ class Toolbox extends Component<Props> {
      * @returns {ReactElement|null}
      */
     _renderRecordingButton() {
-        const { _fileRecordingSession, t } = this.props;
+        const {
+            _fileRecordingSession,
+            _fileRecordingsDisabledTooltipKey,
+            _fileRecordingsEnabled,
+            t } = this.props;
 
         const translationKey = _fileRecordingSession
             ? 'dialog.stopRecording'
@@ -1061,11 +1097,14 @@ class Toolbox extends Component<Props> {
 
         return (
             <OverflowMenuItem
-                accessibilityLabel = 'Record'
+                accessibilityLabel =
+                    { t('toolbar.accessibilityLabel.recording') }
+                disabled = { !_fileRecordingsEnabled }
                 icon = 'icon-camera-take-picture'
                 key = 'recording'
                 onClick = { this._onToolbarToggleRecording }
-                text = { t(translationKey) } />
+                text = { t(translationKey) }
+                tooltip = { t(_fileRecordingsDisabledTooltipKey) } />
         );
     }
 
@@ -1093,15 +1132,15 @@ class Toolbox extends Component<Props> {
  * @returns {{}}
  */
 function _mapStateToProps(state) {
-    const {
-        conference,
-        desktopSharingEnabled
-    } = state['features/base/conference'];
+    const { conference } = state['features/base/conference'];
+    let { desktopSharingEnabled } = state['features/base/conference'];
     const {
         callStatsID,
-        disableDesktopSharing,
-        enableRecording,
         iAmRecorder
+    } = state['features/base/config'];
+    let {
+        fileRecordingsEnabled,
+        liveStreamingEnabled
     } = state['features/base/config'];
     const sharedVideoStatus = state['features/shared-video'].status;
     const { current } = state['features/side-panel'];
@@ -1114,15 +1153,77 @@ function _mapStateToProps(state) {
     } = state['features/toolbox'];
     const localParticipant = getLocalParticipant(state);
     const localVideo = getLocalVideoTrack(state['features/base/tracks']);
-    const isModerator = localParticipant.role === PARTICIPANT_ROLE.MODERATOR;
     const addPeopleEnabled = isAddPeopleEnabled(state);
     const dialOutEnabled = isDialOutEnabled(state);
+
+    let desktopSharingDisabledTooltipKey;
+    let fileRecordingsDisabledTooltipKey;
+    let liveStreamingDisabledTooltipKey;
+
+    fileRecordingsEnabled
+        = isLocalParticipantModerator(state) && fileRecordingsEnabled;
+    liveStreamingEnabled
+        = isLocalParticipantModerator(state) && liveStreamingEnabled;
+
+    if (state['features/base/config'].enableFeaturesBasedOnToken) {
+        // we enable desktop sharing if any participant already have this
+        // feature enabled
+        desktopSharingEnabled = getParticipants(state)
+            .find(({ features = {} }) =>
+                String(features['screen-sharing']) === 'true') !== undefined;
+
+        // we want to show button and tooltip
+        if (state['features/base/jwt'].isGuest) {
+            desktopSharingDisabledTooltipKey
+                = 'dialog.shareYourScreenDisabledForGuest';
+        } else {
+            desktopSharingDisabledTooltipKey
+                = 'dialog.shareYourScreenDisabled';
+        }
+
+        // we enable recording if the local participant have this
+        // feature enabled
+        const { features = {} } = localParticipant;
+        const { isGuest } = state['features/base/jwt'];
+
+        fileRecordingsEnabled
+            = fileRecordingsEnabled && String(features.recording) === 'true';
+
+        // if the feature is disabled on purpose, do no show it, no tooltip
+        if (!fileRecordingsEnabled
+            && String(features.recording) !== 'disabled') {
+            // button and tooltip
+            if (isGuest) {
+                fileRecordingsDisabledTooltipKey
+                    = 'dialog.recordingDisabledForGuestTooltip';
+            } else {
+                fileRecordingsDisabledTooltipKey
+                    = 'dialog.recordingDisabledTooltip';
+            }
+        }
+
+        liveStreamingEnabled
+            = liveStreamingEnabled && String(features.livestreaming) === 'true';
+
+        // if the feature is disabled on purpose, do no show it, no tooltip
+        if (!liveStreamingEnabled
+            && String(features.livestreaming) !== 'disabled') {
+            // button and tooltip
+            if (isGuest) {
+                liveStreamingDisabledTooltipKey
+                    = 'dialog.liveStreamingDisabledForGuestTooltip';
+            } else {
+                liveStreamingDisabledTooltipKey
+                    = 'dialog.liveStreamingDisabledTooltip';
+            }
+        }
+    }
 
     return {
         _chatOpen: current === 'chat_container',
         _conference: conference,
         _desktopSharingEnabled: desktopSharingEnabled,
-        _desktopSharingDisabledByConfig: disableDesktopSharing,
+        _desktopSharingDisabledTooltipKey: desktopSharingDisabledTooltipKey,
         _dialog: Boolean(state['features/base/dialog'].component),
         _editingDocument: Boolean(state['features/etherpad'].editing),
         _etherpadInitialized: Boolean(state['features/etherpad'].initialized),
@@ -1130,15 +1231,18 @@ function _mapStateToProps(state) {
         _hideInviteButton:
             iAmRecorder || (!addPeopleEnabled && !dialOutEnabled),
         _isGuest: state['features/base/jwt'].isGuest,
+        _fileRecordingsDisabledTooltipKey: fileRecordingsDisabledTooltipKey,
+        _fileRecordingsEnabled: fileRecordingsEnabled,
         _fileRecordingSession:
             getActiveSession(state, JitsiRecordingConstants.mode.FILE),
         _fullScreen: fullScreen,
+        _liveStreamingDisabledTooltipKey: liveStreamingDisabledTooltipKey,
+        _liveStreamingEnabled: liveStreamingEnabled,
         _liveStreamingSession:
              getActiveSession(state, JitsiRecordingConstants.mode.STREAM),
         _localParticipantID: localParticipant.id,
         _overflowMenuVisible: overflowMenuVisible,
         _raisedHand: localParticipant.raisedHand,
-        _recordingEnabled: isModerator && enableRecording,
         _screensharing: localVideo && localVideo.videoType === 'desktop',
         _sharingVideo: sharedVideoStatus === 'playing'
             || sharedVideoStatus === 'start'
