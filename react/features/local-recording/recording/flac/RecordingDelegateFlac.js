@@ -14,63 +14,78 @@ export class RecordingDelegateFlac extends RecordingDelegate {
     _stopPromiseResolver = null;
 
     /**
-     * Constructor.
+     * Implements {@link RecordingDelegate.ensureInitialized}.
      *
+     * @inheritdoc
      */
-    constructor() {
-        super();
-        this._encoder = new Worker('/libs/flacEncodeWorker.min.js');
-        this._encoder.onmessage = e => {
-            if (e.data.command === 'end') {
-                // receiving blob
-                this._data = e.data.buf;
-                if (this._stopPromiseResolver !== null) {
-                    this._stopPromiseResolver();
-                    this._stopPromiseResolver = null;
+    ensureInitialized() {
+        if (this._encoder !== null) {
+            return Promise.resolve();
+        }
+   
+        return new Promise((resolve, reject) => {
+
+            try {
+                this._encoder = new Worker('/libs/flacEncodeWorker.min.js');
+            } catch (e) {
+                this._encoder = new Worker('/libs/flacEncodeWorker.js');
+            }
+
+            this._encoder.onmessage = e => {
+                if (e.data.command === 'end') {
+                    // receiving blob
+                    this._data = e.data.buf;
+                    if (this._stopPromiseResolver !== null) {
+                        this._stopPromiseResolver();
+                        this._stopPromiseResolver = null;
+                    }
+                } else if (e.data.cmd === 'debug') {
+                    console.log(e.data);
+                } else {
+                    console.error(
+                        `Unknown event
+                        from encoder (WebWorker): "${e.data.command}"!`);
                 }
-            } else if (e.data.cmd === 'debug') {
-                console.log(e.data);
-            } else {
-                console.error(
-                    `Unknown event
-                    from encoder (WebWorker): "${e.data.command}"!`);
-            }
-        };
-
-        navigator.getUserMedia(
-
-            // constraints - only audio needed for this app
-            {
-                audioBitsPerSecond: 44100, // 44 kbps
-                audio: true,
-                mimeType: 'application/ogg' // useless?
-            },
-
-            // Success callback
-            stream => {
-                // this._mediaRecorder = new MediaRecorder(stream);
-                this._audioContext = new AudioContext();
-                this._audioSource
-                 = this._audioContext.createMediaStreamSource(stream);
-                this._audioProcessingNode
-                  = this._audioContext.createScriptProcessor(4096, 1, 1);
-
-                this._audioProcessingNode.onaudioprocess = e => {
-                    // delegate to web worker
-                    const channelLeft = e.inputBuffer.getChannelData(0);
-
-                    this._encoder.postMessage({
-                        command: 'encode',
-                        buf: channelLeft
-                    });
-                };
-            },
-
-            // Error callback
-            err => {
-                console.log(`The following gUM error occurred: ${err}`);
-            }
-        );
+            };
+    
+            navigator.getUserMedia(
+    
+                // constraints - only audio needed for this app
+                {
+                    audioBitsPerSecond: 44100, // 44 kbps
+                    audio: true,
+                    mimeType: 'application/ogg' // useless?
+                },
+    
+                // Success callback
+                stream => {
+                    // this._mediaRecorder = new MediaRecorder(stream);
+                    this._audioContext = new AudioContext();
+                    this._audioSource
+                     = this._audioContext.createMediaStreamSource(stream);
+                    this._audioProcessingNode
+                      = this._audioContext.createScriptProcessor(4096, 1, 1);
+    
+                    this._audioProcessingNode.onaudioprocess = e => {
+                        // delegate to web worker
+                        const channelLeft = e.inputBuffer.getChannelData(0);
+    
+                        this._encoder.postMessage({
+                            command: 'encode',
+                            buf: channelLeft
+                        });
+                    };
+                    resolve();
+                },
+    
+                // Error callback
+                err => {
+                    console.log(`The following gUM error occurred: ${err}`);
+                    reject();
+                }
+            );
+        });
+        
     }
 
     /**

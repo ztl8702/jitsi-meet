@@ -57,6 +57,7 @@ import OverflowMenuItem from './OverflowMenuItem';
 import OverflowMenuProfileItem from './OverflowMenuProfileItem';
 import ToolbarButton from './ToolbarButton';
 import VideoMuteButton from '../VideoMuteButton';
+import { LocalRecordingButton, toggleDialog as toggleLocalRecording } from '../../../local-recording';
 
 /**
  * The type of the React {@code Component} props of {@link Toolbox}.

@@ -92,8 +92,7 @@ export class RecordingDelegateWav extends RecordingDelegate {
             this._wavBuffers = [];
             this._wavLength = 0;
             this._wavBuffers.push(this._createWavHeader());
-    
-    
+
             this._audioSource.connect(this._audioProcessingNode);
             this._audioProcessingNode.connect(this._audioContext.destination);
             resolve();

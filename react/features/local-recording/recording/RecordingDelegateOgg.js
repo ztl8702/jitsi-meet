@@ -9,11 +9,11 @@ export class RecordingDelegateOgg extends RecordingDelegate {
     _mediaRecorder = null;
 
     /**
-     * Ensure that the MediaRecorder has been initialized.
+     * Implements {@link RecordingDelegate.ensureInitialized}.
      *
-     * @returns {Promise}
+     * @inheritdoc
      */
-    _ensureInitialized() {
+    ensureInitialized() {
         let p = null;
 
         if (this._mediaRecorder === null) {
@@ -31,7 +31,8 @@ export class RecordingDelegateOgg extends RecordingDelegate {
                     stream => {
                         // myAudioStream = stream;
                         this._mediaRecorder = new MediaRecorder(stream);
-                        this._mediaRecorder.ondataavailable = e => this._saveMediaData(e.data);
+                        this._mediaRecorder.ondataavailable
+                            = e => this._saveMediaData(e.data);
                         resolve();
                     },
 
@@ -57,7 +58,10 @@ export class RecordingDelegateOgg extends RecordingDelegate {
      * @inheritdoc
      */
     start() {
-        this._ensureInitialized().then(() => this._mediaRecorder.start());
+        return new Promise(resolve => {
+            this._mediaRecorder.start();
+            resolve();
+        });
     }
 
     /**

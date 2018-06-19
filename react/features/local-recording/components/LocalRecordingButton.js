@@ -1,3 +1,5 @@
+/* @flow */
+
 import InlineDialog from '@atlaskit/inline-dialog';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
@@ -7,7 +9,10 @@ import { ToolbarButton } from '../../toolbox';
 import LocalRecordingInfoDialog from './LocalRecordingInfoDialog';
 import { toggleRecording } from '../actions';
 
-import {showErrorNotification, showNotification} from '../../notifications';
+import { showErrorNotification, showNotification } from '../../notifications';
+
+declare var LocalRecording: object;
+
 /**
  * A React {@code Component} for opening or closing the {@code OverflowMenu}.
  *
