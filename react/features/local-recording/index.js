@@ -23,7 +23,7 @@ setupController();
 
 window.onload = () => {
     recordingController.registerEvents();
-}
+};
 
 /**
  * Starts MediaRecorder.
@@ -43,5 +43,3 @@ function startRecording() {
 function stopRecording() {
     recordingController.stopRecording();
 }
-
-
