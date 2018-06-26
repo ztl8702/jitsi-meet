@@ -1,7 +1,7 @@
 /**
  * Common interface for recording mechanisms
  */
-export class RecordingDelegate {
+export class RecordingAdapter {
 
     /**
      * Initialize the recording backend.

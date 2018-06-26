@@ -1,4 +1,4 @@
-import { RecordingDelegate } from './RecordingDelegate';
+import { RecordingAdapter } from './RecordingAdapter';
 import { downloadBlob, timestampString } from './Utils';
 
 
@@ -9,7 +9,7 @@ const WAV_SAMPLE_RATE = 44100;
 /**
  * Raw wav format recording
  */
-export class RecordingDelegateWav extends RecordingDelegate {
+export class WavAdapter extends RecordingAdapter {
 
     _audioContext = null;
     _audioProcessingNode = null;

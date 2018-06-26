@@ -61,7 +61,7 @@ export class RecordingController {
             }
             
         }
-    }
+    } 
 
 
     /**
@@ -99,7 +99,6 @@ export class RecordingController {
             + 'You cannot change recording status.');
         }
     }
-
 
     /**
      * Triggers the download of recorded data.

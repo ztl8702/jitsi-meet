@@ -1,10 +1,10 @@
-import { RecordingDelegate } from '../RecordingDelegate';
+import { RecordingAdapter } from '../RecordingAdapter';
 import { downloadBlob, timestampString } from '../Utils';
 
 /**
  * Uses libflac in the background
  */
-export class RecordingDelegateFlac extends RecordingDelegate {
+export class FlacAdapter extends RecordingAdapter {
 
     _encoder = null;
     _audioContext = null;

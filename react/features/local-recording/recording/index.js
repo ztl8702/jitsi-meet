@@ -1,4 +1,4 @@
+export * from './RecordingAdapter';
 export * from './flac';
-export * from './RecordingDelegate';
-export * from './RecordingDelegateOgg';
-export * from './RecordingDelegateWav';
+export * from './OggAdapter';
+export * from './WavAdapter';
