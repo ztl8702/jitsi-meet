@@ -35,8 +35,15 @@ import {
     StopLiveStreamDialog,
     getActiveSession
 } from '../../../recording';
-import { toggleDialog as toggleLocalRecording, LocalRecordingButton } from '../../local-recording';
-import { SettingsButton } from '../../../settings';
+import {
+    toggleDialog as toggleLocalRecording,
+    LocalRecordingButton
+} from '../../../local-recording';
+import {
+    SETTINGS_TABS,
+    SettingsButton,
+    openSettingsDialog
+} from '../../../settings';
 import { toggleSharedVideo } from '../../../shared-video';
 import { toggleChat } from '../../../side-panel';
 import { SpeakerStats } from '../../../speaker-stats';
@@ -57,7 +64,6 @@ import OverflowMenuItem from './OverflowMenuItem';
 import OverflowMenuProfileItem from './OverflowMenuProfileItem';
 import ToolbarButton from './ToolbarButton';
 import VideoMuteButton from '../VideoMuteButton';
-import { LocalRecordingButton, toggleDialog as toggleLocalRecording } from '../../../local-recording';
 
 /**
  * The type of the React {@code Component} props of {@link Toolbox}.
@@ -161,6 +167,8 @@ type Props = {
      * Whether or not the local participant is sharing a YouTube video.
      */
     _sharingVideo: boolean,
+
+    _localRecState: Object,
 
     /**
      * Flag showing whether toolbar is visible.

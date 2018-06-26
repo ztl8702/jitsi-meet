@@ -1,1 +1,1 @@
-export * from "./RecordingController";
+export * from './RecordingController';

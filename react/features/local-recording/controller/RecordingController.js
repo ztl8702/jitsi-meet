@@ -1,9 +1,12 @@
+/* @flow */
+
 import {
-    RecordingDelegateOgg,
-    RecordingDelegateFlac,
-    RecordingDelegateWav 
+    OggAdapter,
+    FlacAdapter,
+    WavAdapter
 } from '../recording';
 
+declare var APP: Object;
 
 const COMMAND_START = 'localRecStart';
 const COMMAND_STOP = 'localRecStop';
@@ -18,7 +21,6 @@ const ControllerState = Object.freeze({
     RECORDING: Symbol('recording')
 });
 
-declare var APP: object;
 
 /**
  * Recoding coordination, across multiple participants
@@ -26,13 +28,13 @@ declare var APP: object;
 export class RecordingController {
 
     _delegates = {};
-    _conference = null;
-    _currentSessionToken = -1;
+    _conference: * = null;
+    _currentSessionToken: number = -1;
     _state = ControllerState.IDLE;
     _format = DEFAULT_RECORDING_FORMAT;
-    onNotify = null;
-    onWarning = null;
-    onStateChanged = null;
+    onNotify: ?(string) => void = null;
+    onWarning: ?(string) => void = null;
+    onStateChanged: ?(boolean) => void = null;
 
     /**
      * Constructor.
@@ -43,26 +45,30 @@ export class RecordingController {
         this._doStartRecording = this._doStartRecording.bind(this);
         this._doStopRecording = this._doStopRecording.bind(this);
         this.registerEvents = this.registerEvents.bind(this);
-
     }
 
     _registered = false;
 
+
+    registerEvents: () => void;
+
     /**
-     * 
+     * Register XMPP events.
+     *
+     * @returns {void}
      */
     registerEvents() {
         if (!this._registered) {
             this._conference = APP.conference;
-            if (this._conference !== null) {
-                this._conference.commands.addCommandListener(COMMAND_START, this._onStartCommand);
-                this._conference.commands.addCommandListener(COMMAND_STOP, this._onStopCommand);
+            if (this._conference && this._conference.commands) {
+                this._conference.commands
+                    .addCommandListener(COMMAND_STOP, this._onStopCommand);
+                this._conference.commands
+                    .addCommandListener(COMMAND_START, this._onStartCommand);
                 this._registered = true;
             }
-            
         }
-    } 
-
+    }
 
     /**
      * Signals the participants to start local recording.
@@ -70,18 +76,17 @@ export class RecordingController {
      * @returns {void}
      */
     startRecording() {
-        
         this.registerEvents();
-        if (this._conference.isModerator) {
+        if (this._conference && this._conference.isModerator
+            && this._conference.commands) {
             this._conference.commands.sendCommandOnce(COMMAND_START, {
                 attributes: {
                     sessionToken: this._getRandomToken(),
                     format: this._format
                 }
-                
             });
-        } else {
-            this.onWarning('You are not the moderator.'
+        } else if (this.onWarning) {
+            this.onWarning('You are not the moderator. '
             + 'You cannot change recording status.');
         }
     }
@@ -92,11 +97,13 @@ export class RecordingController {
      * @returns {void}
      */
     stopRecording() {
-        if (this._conference.isModerator) {
-            this._conference.commands.sendCommandOnce(COMMAND_STOP, {});
-        } else {
-            this.onWarning('You are not the moderator.'
-            + 'You cannot change recording status.');
+        if (this._conference) {
+            if (this._conference.isModerator) {
+                this._conference.commands.sendCommandOnce(COMMAND_STOP, {});
+            } else if (this.onWarning) {
+                this.onWarning('You are not the moderator. '
+                + 'You cannot change recording status.');
+            }
         }
     }
 
@@ -104,10 +111,10 @@ export class RecordingController {
      * Triggers the download of recorded data.
      * Browser only.
      *
-     * @param {*} sessionToken - The token of the session to download.
+     * @param {number} sessionToken - The token of the session to download.
      * @returns {void}
      */
-    downloadRecordedData(sessionToken) {
+    downloadRecordedData(sessionToken: number) {
         if (this._delegates[sessionToken]) {
             this._delegates[sessionToken].download();
         } else {
@@ -118,15 +125,17 @@ export class RecordingController {
     /**
      * Switches the recording format.
      *
-     * @param {*} newFormat - The new format.
+     * @param {string} newFormat - The new format.
      * @returns {void}
      */
-    switchFormat(newFormat) {
+    switchFormat(newFormat: string) {
         this._format = newFormat;
         console.log(`Recording format switched to ${newFormat}`);
 
         // will be used next time
     }
+
+    _onStartCommand: (*) => void;
 
     /**
      * Callback function for XMPP event.
@@ -141,29 +150,31 @@ export class RecordingController {
         if (this._state === ControllerState.IDLE) {
             this._format = format;
             this._currentSessionToken = sessionToken;
-            this._delegates[sessionToken] =
-                this._createRecordingDelegate();
+            this._delegates[sessionToken]
+                 = this._createRecordingDelegate();
             this._doStartRecording();
         } else if (this._currentSessionToken !== sessionToken) {
             // we need to restart the recording
             this._doStopRecording().then(() => {
                 this._format = format;
                 this._currentSessionToken = sessionToken;
-                this._delegates[sessionToken] =
-                    this._createRecordingDelegate();
+                this._delegates[sessionToken]
+                    = this._createRecordingDelegate();
                 this._doStartRecording();
             });
         }
     }
 
+    _onStopCommand: (*) => void;
+
     /**
      * Callback function for XMPP event.
      *
      * @private
-     * @param {*} value - The event args.
+     * @param {*} _value - The event args.
      * @returns {void}
      */
-    _onStopCommand(value) {
+    _onStopCommand(/* eslint-disable*/_value/* eslint-enable */) {
         if (this._state === ControllerState.RECORDING) {
             this._doStopRecording();
         }
@@ -178,6 +189,8 @@ export class RecordingController {
     _getRandomToken() {
         return Math.floor(Math.random() * 10000) + 1;
     }
+
+    _doStartRecording: () => void;
 
     /**
      * Starts the recording.
@@ -194,7 +207,9 @@ export class RecordingController {
             .then(() => delegate.start())
             .then(() => {
                 console.log('Recording starts');
-                this.onNotify('Local recording started.');
+                if (this.onNotify) {
+                    this.onNotify('Local recording started.');
+                }
                 if (this.onStateChanged) {
                     this.onStateChanged(true);
                 }
@@ -203,11 +218,13 @@ export class RecordingController {
         }
     }
 
+    _doStopRecording: () => Promise<void>;
+
     /**
      * Stops the recording.
      *
      * @private
-     * @returns {Promise}
+     * @returns {Promise<void>}
      */
     _doStopRecording() {
         if (this._state === ControllerState.RECORDING) {
@@ -219,15 +236,20 @@ export class RecordingController {
                     this._state = ControllerState.IDLE;
                     console.log('Recording stopped.');
                     this.downloadRecordedData(token);
-                    this.onNotify(`Recording session ${token} finished. `
+                    if (this.onNotify) {
+                        this.onNotify(`Recording session ${token} finished. `
                         + 'Please send the recorded file to the moderator.');
+                    }
                     if (this.onStateChanged) {
                         this.onStateChanged(false);
                     }
                 });
         }
 
-        return Promise.resolve();
+        /* eslint-disable */
+        return (Promise.resolve(): Promise<void>); 
+        // @todo: better ways to satisfy flow
+        /* eslint-enable */
 
     }
 

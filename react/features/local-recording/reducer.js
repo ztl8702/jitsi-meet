@@ -1,9 +1,15 @@
+/* @flow */
+
 import { ReducerRegistry } from '../base/redux';
 
 import {
-    LOCAL_RECORDING_OFF, CLOCK_TICK, LOCAL_RECORDING_ON, LOCAL_RECORDING_TOGGLE_DIALOG
+    LOCAL_RECORDING_OFF,
+    CLOCK_TICK,
+    LOCAL_RECORDING_ON,
+    LOCAL_RECORDING_TOGGLE_DIALOG
 } from './actionTypes';
 
+declare var LocalRecording: Object;
 
 ReducerRegistry.register('features/local-recording', (state = {}, action) => {
     console.log(state);
@@ -16,7 +22,7 @@ ReducerRegistry.register('features/local-recording', (state = {}, action) => {
             encodingFormat: LocalRecording.controller._format
         };
     }
-    case LOCAL_RECORDING_OFF: 
+    case LOCAL_RECORDING_OFF:
         return {
             ...state,
             on: false,
@@ -25,7 +31,8 @@ ReducerRegistry.register('features/local-recording', (state = {}, action) => {
     case LOCAL_RECORDING_TOGGLE_DIALOG:
         return {
             ...state,
-            showDialog: state.showDialog === null || state.showDialog === false
+            showDialog: state.showDialog === undefined
+                || state.showDialog === false
         };
     case CLOCK_TICK:
         return {
@@ -36,5 +43,3 @@ ReducerRegistry.register('features/local-recording', (state = {}, action) => {
         return state;
     }
 });
-
-
