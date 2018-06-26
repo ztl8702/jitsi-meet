@@ -6,7 +6,8 @@ import {
     LOCAL_RECORDING_OFF,
     CLOCK_TICK,
     LOCAL_RECORDING_ON,
-    LOCAL_RECORDING_TOGGLE_DIALOG
+    LOCAL_RECORDING_TOGGLE_DIALOG,
+    LOCAL_RECORDING_STATS_UPDATE
 } from './actionTypes';
 
 declare var LocalRecording: Object;
@@ -38,6 +39,11 @@ ReducerRegistry.register('features/local-recording', (state = {}, action) => {
         return {
             ...state,
             currentTime: new Date(Date.now())
+        };
+    case LOCAL_RECORDING_STATS_UPDATE:
+        return {
+            ...state,
+            stats: action.stats
         };
     default:
         return state;

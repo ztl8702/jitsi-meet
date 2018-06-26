@@ -2,7 +2,8 @@ import {
     LOCAL_RECORDING_ON,
     LOCAL_RECORDING_OFF,
     CLOCK_TICK,
-    LOCAL_RECORDING_TOGGLE_DIALOG
+    LOCAL_RECORDING_TOGGLE_DIALOG,
+    LOCAL_RECORDING_STATS_UPDATE
 } from './actionTypes';
 
 /**
@@ -50,3 +51,13 @@ export function clockTick() {
     };
 }
 
+/**
+ * 
+ * @param {*} stats 
+ */
+export function statsUpdate(stats: Object) {
+    return {
+        type: LOCAL_RECORDING_STATS_UPDATE,
+        stats
+    };
+}

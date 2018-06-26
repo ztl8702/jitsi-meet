@@ -9,7 +9,7 @@ import {
     getLocalParticipant
 } from '../../base/participants';
 
-import { clockTick } from '../actions';
+import { clockTick, statsUpdate } from '../actions';
 
 declare var LocalRecording: Object;
 
@@ -31,14 +31,13 @@ class LocalRecordingInfoDialog extends Component<*> {
          * The size (in bytes) of encoded audio in memory
          *
          */
-        audioFileSize: PropTypes.number,
         currentTime: PropTypes.object,
         dispatch: PropTypes.func,
         encodingFormat: PropTypes.string,
         isModerator: PropTypes.bool,
         isOn: PropTypes.bool,
-        recordingStartedAt: PropTypes.object
-
+        recordingStartedAt: PropTypes.object,
+        stats: PropTypes.object
     };
 
     _timer: ?IntervalID;
@@ -58,7 +57,16 @@ class LocalRecordingInfoDialog extends Component<*> {
      */
     componentWillMount() {
         this._timer = setInterval(
-            () => this.props.dispatch(clockTick()),
+            () => {
+                this.props.dispatch(clockTick());
+                try {
+                    this.props.dispatch(
+                        statsUpdate(LocalRecording
+                        .controller.getParticipantsStats()));
+                } catch (e) {
+                    // do nothing
+                }
+            },
             1000
         );
     }
@@ -73,6 +81,33 @@ class LocalRecordingInfoDialog extends Component<*> {
             clearInterval(this._timer);
             this._timer = null;
         }
+    }
+
+
+    /**
+     * sdf.
+     * 
+     */
+    renderStats() {
+        const { stats } = this.props;
+        
+        if (stats === undefined) {
+            return (<ul />);
+        }
+        const ids = Object.keys(stats);
+
+        return (
+            <ul>
+                {ids.map((id, i) =>
+                    (<li key = { i }>
+                        <span>{stats[id].displayName || id} :</span>
+                        <span>{stats[id].recordingStats
+                            ? `${stats[id].recordingStats.isRecording ? 'On' : 'Off'} (${stats[id].recordingStats.currentSessionToken})`
+                            : 'Unknown'}</span>
+                    </li>)
+                )}
+            </ul>
+        );
     }
 
     /**
@@ -126,6 +161,10 @@ class LocalRecordingInfoDialog extends Component<*> {
                             {encodingFormat}
                         </span>
                     </div>
+                    }
+                    {
+                        isModerator
+                            && this.renderStats()
                     }
                     {
                         isModerator
@@ -231,7 +270,8 @@ function _mapStateToProps(state) {
         currentTime,
         recordingStartedAt,
         encodingFormat,
-        on: isOn
+        on: isOn,
+        stats
     } = state['features/local-recording'];
     const isModerator
         = getLocalParticipant(state).role === PARTICIPANT_ROLE.MODERATOR;
@@ -242,7 +282,7 @@ function _mapStateToProps(state) {
         currentTime,
         recordingStartedAt,
         encodingFormat,
-        audioFileSize: 0
+        stats
     };
 }
 

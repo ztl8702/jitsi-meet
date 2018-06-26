@@ -10,8 +10,8 @@ declare var APP: Object;
 
 const COMMAND_START = 'localRecStart';
 const COMMAND_STOP = 'localRecStop';
-const COMMAND_CHANGE_CONFIG = 'localRecConfig';
-const COMMAND_CLIENT_UPDATE = 'localRecClientUpdate';
+const PROPERTY_STATS = 'localRecStats';
+
 
 const DEFAULT_RECORDING_FORMAT = 'flac';
 
@@ -21,6 +21,15 @@ const ControllerState = Object.freeze({
     RECORDING: Symbol('recording')
 });
 
+/**
+ * Type of the stats reported by each client.
+ */
+type RecordingStats = {
+    currentSessionToken: number,
+    isRecording: boolean,
+    recordedBytes: number,
+    recordedLength: number
+}
 
 /**
  * Recoding coordination, across multiple participants
@@ -38,13 +47,17 @@ export class RecordingController {
 
     /**
      * Constructor.
+     *
+     * @returns {void}
      */
     constructor() {
+        this._updateStats = this._updateStats.bind(this);
         this._onStartCommand = this._onStartCommand.bind(this);
         this._onStopCommand = this._onStopCommand.bind(this);
         this._doStartRecording = this._doStartRecording.bind(this);
         this._doStopRecording = this._doStopRecording.bind(this);
         this.registerEvents = this.registerEvents.bind(this);
+        this.getParticipantsStats = this.getParticipantsStats.bind(this);
     }
 
     _registered = false;
@@ -57,13 +70,13 @@ export class RecordingController {
      *
      * @returns {void}
      */
-    registerEvents() {
+    registerEvents(conference) {
         if (!this._registered) {
-            this._conference = APP.conference;
-            if (this._conference && this._conference.commands) {
-                this._conference.commands
+            this._conference = conference;
+            if (this._conference) {
+                this._conference
                     .addCommandListener(COMMAND_STOP, this._onStopCommand);
-                this._conference.commands
+                this._conference
                     .addCommandListener(COMMAND_START, this._onStartCommand);
                 this._registered = true;
             }
@@ -77,9 +90,9 @@ export class RecordingController {
      */
     startRecording() {
         this.registerEvents();
-        if (this._conference && this._conference.isModerator
-            && this._conference.commands) {
-            this._conference.commands.sendCommandOnce(COMMAND_START, {
+        if (this._conference && this._conference.isModerator()) {
+                this._conference.removeCommand(COMMAND_STOP);
+                this._conference.sendCommand(COMMAND_START, {
                 attributes: {
                     sessionToken: this._getRandomToken(),
                     format: this._format
@@ -99,7 +112,12 @@ export class RecordingController {
     stopRecording() {
         if (this._conference) {
             if (this._conference.isModerator) {
-                this._conference.commands.sendCommandOnce(COMMAND_STOP, {});
+                this._conference.removeCommand(COMMAND_START);
+                this._conference.sendCommand(COMMAND_STOP,{
+                    attributes: {
+                        sessionToken: this._currentSessionToken
+                   }
+                });
             } else if (this.onWarning) {
                 this.onWarning('You are not the moderator. '
                 + 'You cannot change recording status.');
@@ -133,6 +151,52 @@ export class RecordingController {
         console.log(`Recording format switched to ${newFormat}`);
 
         // will be used next time
+    }
+
+    getLocalStats(): RecordingStats {
+        return {
+            currentSessionToken: this._currentSessionToken,
+            isRecording: this._state === ControllerState.RECORDING,
+            recordedBytes: 0,
+            recordedLength: 0
+        }
+    }
+
+    getParticipantsStats: () => *;
+
+    getParticipantsStats() {
+        const members = 
+            this._conference.getParticipants()
+            .map(member => ({
+                id: member.getId(),
+                displayName: member.getDisplayName(),
+                recordingStats: JSON.parse(member.getProperty(PROPERTY_STATS) || '{}'),
+                isSelf: false
+        }));
+
+        // transform into a dictionary,
+        // for consistent ordering 
+        let result = {};
+        for (let i = 0; i < members.length; ++i) {
+            result[members[i].id] = members[i];
+        }
+        const localId = this._conference.myUserId();
+        result[localId] = {
+            id: localId,
+            displayName: 'local user',
+            recordingStats: this.getLocalStats(),
+            isSelf: true
+        };
+        return result;
+    }
+
+    _updateStats: () => void;
+
+    _updateStats() {
+        if (this._conference) {
+            this._conference.setLocalParticipantProperty(PROPERTY_STATS, 
+                JSON.stringify(this.getLocalStats()))
+        }
     }
 
     _onStartCommand: (*) => void;
@@ -171,11 +235,12 @@ export class RecordingController {
      * Callback function for XMPP event.
      *
      * @private
-     * @param {*} _value - The event args.
+     * @param {*} value - The event args.
      * @returns {void}
      */
-    _onStopCommand(/* eslint-disable*/_value/* eslint-enable */) {
-        if (this._state === ControllerState.RECORDING) {
+    _onStopCommand(value) {
+        if (this._state === ControllerState.RECORDING
+            && this._currentSessionToken === value.attributes.sessionToken) {
             this._doStopRecording();
         }
     }
@@ -213,7 +278,9 @@ export class RecordingController {
                 if (this.onStateChanged) {
                     this.onStateChanged(true);
                 }
+                this._updateStats();
             });
+            // @todo catch
 
         }
     }
@@ -243,7 +310,9 @@ export class RecordingController {
                     if (this.onStateChanged) {
                         this.onStateChanged(false);
                     }
+                    this._updateStats();
                 });
+                //@ todo catch 
         }
 
         /* eslint-disable */
