@@ -33,6 +33,7 @@ import EventEmitter from 'events';
 import {
     AVATAR_ID_COMMAND,
     AVATAR_URL_COMMAND,
+    authStatusChanged,
     conferenceFailed,
     conferenceJoined,
     conferenceLeft,
@@ -1650,7 +1651,7 @@ export default {
         room.on(
             JitsiConferenceEvents.AUTH_STATUS_CHANGED,
             (authEnabled, authLogin) =>
-                APP.UI.updateAuthInfo(authEnabled, authLogin));
+                APP.store.dispatch(authStatusChanged(authEnabled, authLogin)));
 
         room.on(JitsiConferenceEvents.PARTCIPANT_FEATURES_CHANGED,
             user => APP.UI.onUserFeaturesChanged(user));
@@ -1784,13 +1785,6 @@ export default {
             id => APP.store.dispatch(dominantSpeakerChanged(id, room)));
 
         if (!interfaceConfig.filmStripOnly) {
-            room.on(JitsiConferenceEvents.CONNECTION_INTERRUPTED, () => {
-                APP.UI.markVideoInterrupted(true);
-            });
-            room.on(JitsiConferenceEvents.CONNECTION_RESTORED, () => {
-                APP.UI.markVideoInterrupted(false);
-            });
-
             if (isButtonEnabled('chat')) {
                 room.on(
                     JitsiConferenceEvents.MESSAGE_RECEIVED,
@@ -1840,15 +1834,11 @@ export default {
         room.on(JitsiConferenceEvents.CONNECTION_INTERRUPTED, () => {
             APP.store.dispatch(localParticipantConnectionStatusChanged(
                 JitsiParticipantConnectionStatus.INTERRUPTED));
-
-            APP.UI.showLocalConnectionInterrupted(true);
         });
 
         room.on(JitsiConferenceEvents.CONNECTION_RESTORED, () => {
             APP.store.dispatch(localParticipantConnectionStatusChanged(
                 JitsiParticipantConnectionStatus.ACTIVE));
-
-            APP.UI.showLocalConnectionInterrupted(false);
         });
 
         room.on(
@@ -1997,7 +1987,6 @@ export default {
                 id: from,
                 email: data.value
             }));
-            APP.UI.setUserEmail(from, data.value);
         });
 
         room.addCommandListener(
@@ -2301,10 +2290,10 @@ export default {
 
         APP.store.dispatch(conferenceJoined(room));
 
-        APP.UI.mucJoined();
         const displayName
             = APP.store.getState()['features/base/settings'].displayName;
 
+        APP.UI.changeDisplayName('localVideoContainer', displayName);
         APP.API.notifyConferenceJoined(
             this.roomName,
             this._room.myUserId(),
@@ -2317,7 +2306,6 @@ export default {
                     APP.store.getState(), this._room.myUserId())
             }
         );
-        APP.UI.markVideoInterrupted(false);
     },
 
     /**
@@ -2575,7 +2563,6 @@ export default {
             email: formattedEmail
         }));
 
-        APP.UI.setUserEmail(localId, formattedEmail);
         sendData(commands.EMAIL, formattedEmail);
     },
 
