@@ -15,11 +15,7 @@ import SharedVideoManager from './shared_video/SharedVideo';
 
 import VideoLayout from './videolayout/VideoLayout';
 import Filmstrip from './videolayout/Filmstrip';
-import Profile from './side_pannels/profile/Profile';
 
-import {
-    openDeviceSelectionDialog
-} from '../../react/features/device-selection';
 import { updateDeviceList } from '../../react/features/base/devices';
 import { JitsiTrackErrors } from '../../react/features/base/lib-jitsi-meet';
 import {
@@ -97,22 +93,6 @@ const UIListeners = new Map([
     ], [
         UIEvents.TOGGLE_CHAT,
         () => UI.toggleChat()
-    ], [
-        UIEvents.TOGGLE_SETTINGS,
-        () => {
-            // Opening of device selection is special-cased as it is a dialog
-            // opened through a button in settings and not directly displayed in
-            // settings itself. As it is not useful to only have a settings menu
-            // with a button to open a dialog, open the dialog directly instead.
-            if (shouldShowOnlyDeviceSelection()) {
-                APP.store.dispatch(openDeviceSelectionDialog());
-            } else {
-                UI.toggleSidePanel('settings_container');
-            }
-        }
-    ], [
-        UIEvents.TOGGLE_PROFILE,
-        () => UI.toggleSidePanel('profile_container')
     ], [
         UIEvents.TOGGLE_FILMSTRIP,
         () => UI.handleToggleFilmstrip()
@@ -216,20 +196,8 @@ UI.changeDisplayName = function(id, displayName) {
     VideoLayout.onDisplayNameChanged(id, displayName);
 
     if (APP.conference.isLocalId(id) || id === 'localVideoContainer') {
-        Profile.changeDisplayName(displayName);
         Chat.setChatConversationMode(Boolean(displayName));
     }
-};
-
-/**
- * Shows/hides the indication about local connection being interrupted.
- *
- * @param {boolean} isInterrupted <tt>true</tt> if local connection is
- * currently in the interrupted state or <tt>false</tt> if the connection
- * is fine.
- */
-UI.showLocalConnectionInterrupted = function(isInterrupted) {
-    VideoLayout.showLocalConnectionInterrupted(isInterrupted);
 };
 
 /**
@@ -268,7 +236,7 @@ UI.setLocalRaisedHandStatus
  */
 UI.initConference = function() {
     const { getState } = APP.store;
-    const { email, id, name } = getLocalParticipant(getState);
+    const { id, name } = getLocalParticipant(getState);
 
     // Update default button states before showing the toolbar
     // if local role changes buttons state will be again updated.
@@ -282,26 +250,11 @@ UI.initConference = function() {
         UI.changeDisplayName('localVideoContainer', displayName);
     }
 
-    // Make sure we configure our avatar id, before creating avatar for us
-    if (email) {
-        UI.setUserEmail(id, email);
-    }
-
     // FollowMe attempts to copy certain aspects of the moderator's UI into the
     // other participants' UI. Consequently, it needs (1) read and write access
     // to the UI (depending on the moderator role of the local participant) and
     // (2) APP.conference as means of communication between the participants.
     followMeHandler = new FollowMe(APP.conference, UI);
-};
-
-UI.mucJoined = function() {
-    VideoLayout.mucJoined();
-
-    // Update local video now that a conference is joined a user ID should be
-    // set.
-    UI.changeDisplayName(
-        'localVideoContainer',
-        APP.conference.getLocalDisplayName());
 };
 
 /** *
@@ -442,13 +395,6 @@ UI.addLocalStream = track => {
     }
 };
 
-
-/**
- * Show remote stream on UI.
- * @param {JitsiTrack} track stream to show
- */
-UI.addRemoteStream = track => VideoLayout.onRemoteStreamAdded(track);
-
 /**
  * Removed remote stream from UI.
  * @param {JitsiTrack} track stream to remove
@@ -491,9 +437,6 @@ UI.addUser = function(user) {
     } else {
         APP.store.dispatch(showParticipantJoinedNotification(displayName));
     }
-
-    // Configure avatar
-    UI.setUserEmail(id);
 
     // set initial display name
     if (displayName) {
@@ -740,17 +683,6 @@ UI.showToolbar = timeout => APP.store.dispatch(showToolbox(timeout));
 UI.dockToolbar = dock => APP.store.dispatch(dockToolbox(dock));
 
 /**
- * Update user email.
- * @param {string} id user id
- * @param {string} email user email
- */
-UI.setUserEmail = function(id, email) {
-    if (APP.conference.isLocalId(id)) {
-        Profile.changeEmail(email);
-    }
-};
-
-/**
  * Updates the displayed avatar for participant.
  *
  * @param {string} id - User id whose avatar should be updated.
@@ -833,18 +765,6 @@ UI.hideStats = function() {
 };
 
 /**
- * Mark video as interrupted or not.
- * @param {boolean} interrupted if video is interrupted
- */
-UI.markVideoInterrupted = function(interrupted) {
-    if (interrupted) {
-        VideoLayout.onVideoInterrupted();
-    } else {
-        VideoLayout.onVideoRestored();
-    }
-};
-
-/**
  * Add chat message.
  * @param {string} from user id
  * @param {string} displayName user nickname
@@ -878,25 +798,6 @@ UI.notifyFocusDisconnected = function(focus, retrySec) {
         { component: focus,
             ms: retrySec }
     );
-};
-
-/**
- * Updates auth info on the UI.
- * @param {boolean} isAuthEnabled if authentication is enabled
- * @param {string} [login] current login
- */
-UI.updateAuthInfo = function(isAuthEnabled, login) {
-    const showAuth = isAuthEnabled && UIUtil.isAuthenticationEnabled();
-    const loggedIn = Boolean(login);
-
-    Profile.showAuthenticationButtons(showAuth);
-
-    if (showAuth) {
-        Profile.setAuthenticatedIdentity(login);
-
-        Profile.showLoginButton(!loggedIn);
-        Profile.showLogoutButton(loggedIn);
-    }
 };
 
 /**

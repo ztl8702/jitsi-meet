@@ -36,10 +36,17 @@ import {
     StopRecordingDialog,
     getActiveSession
 } from '../../../recording';
-import { toggleDialog as toggleLocalRecording, LocalRecordingButton } from '../../local-recording';
-import { SettingsButton } from '../../../settings';
+import {
+    toggleDialog as toggleLocalRecording,
+    LocalRecordingButton 
+} from '../../../local-recording';
+import {
+    SETTINGS_TABS,
+    SettingsButton,
+    openSettingsDialog
+} from '../../../settings';
 import { toggleSharedVideo } from '../../../shared-video';
-import { toggleChat, toggleProfile } from '../../../side-panel';
+import { toggleChat } from '../../../side-panel';
 import { SpeakerStats } from '../../../speaker-stats';
 import {
     OverflowMenuVideoQualityItem,
@@ -55,11 +62,9 @@ import AudioMuteButton from '../AudioMuteButton';
 import HangupButton from '../HangupButton';
 import OverflowMenuButton from './OverflowMenuButton';
 import OverflowMenuItem from './OverflowMenuItem';
-import OverflowMenuLiveStreamingItem from './OverflowMenuLiveStreamingItem';
 import OverflowMenuProfileItem from './OverflowMenuProfileItem';
 import ToolbarButton from './ToolbarButton';
 import VideoMuteButton from '../VideoMuteButton';
-import { LocalRecordingButton, toggleDialog as toggleLocalRecording } from '../../../local-recording';
 
 /**
  * The type of the React {@code Component} props of {@link Toolbox}.
@@ -185,8 +190,6 @@ type Props = {
      */
     _visible: boolean,
 
-    _localRecState: any,
-
     /**
      * Set with the buttons which this Toolbox should display.
      */
@@ -260,8 +263,6 @@ class Toolbox extends Component<Props> {
             = this._onToolbarToggleScreenshare.bind(this);
         this._onToolbarToggleSharedVideo
             = this._onToolbarToggleSharedVideo.bind(this);
-        this._onToolbarToggleLocalRecording
-            = this._onToolbarToggleLocalRecording.bind(this);
     }
 
     /**
@@ -342,8 +343,6 @@ class Toolbox extends Component<Props> {
      * @returns {ReactElement}
      */
     render() {
-        console.log("toolbox state",this.state);
-        console.log("toolbox props",this.props);
         const {
             _chatOpen,
             _hideInviteButton,
@@ -400,10 +399,6 @@ class Toolbox extends Component<Props> {
                         visible = { this._shouldShowButton('camera') } />
                 </div>
                 <div className = 'button-group-right'>
-                    <LocalRecordingButton
-                        dispatch = { this.props.dispatch } 
-                        isOn = { this.props._localRecState.showDialog }
-                        onClick = { this._onToolbarToggleLocalRecording } />
                     { this._shouldShowButton('invite')
                         && !_hideInviteButton
                         && <ToolbarButton
@@ -527,7 +522,7 @@ class Toolbox extends Component<Props> {
      * @returns {void}
      */
     _doToggleProfile() {
-        this.props.dispatch(toggleProfile());
+        this.props.dispatch(openSettingsDialog(SETTINGS_TABS.PROFILE));
     }
 
     /**
@@ -994,6 +989,43 @@ class Toolbox extends Component<Props> {
     }
 
     /**
+     * Renders an {@code OverflowMenuItem} to start or stop live streaming of
+     * the current conference.
+     *
+     * @private
+     * @returns {ReactElement}
+     */
+    _renderLiveStreamingButton() {
+        const {
+            _liveStreamingDisabledTooltipKey,
+            _liveStreamingEnabled,
+            _liveStreamingSession,
+            t
+        } = this.props;
+
+        const translationKey = _liveStreamingSession
+            ? 'dialog.stopLiveStreaming'
+            : 'dialog.startLiveStreaming';
+
+        return (
+            <OverflowMenuItem
+                accessibilityLabel
+                    = { t('dialog.accessibilityLabel.liveStreaming') }
+                disabled = { !_liveStreamingEnabled }
+                elementAfter = {
+                    <span className = 'beta-tag'>
+                        { t('recording.beta') }
+                    </span>
+                }
+                icon = 'icon-public'
+                key = 'livestreaming'
+                onClick = { this._onToolbarToggleLiveStreaming }
+                text = { t(translationKey) }
+                tooltip = { t(_liveStreamingDisabledTooltipKey) } />
+        );
+    }
+
+    /**
      * Renders the list elements of the overflow menu.
      *
      * @private
@@ -1010,7 +1042,6 @@ class Toolbox extends Component<Props> {
             _isGuest,
             _liveStreamingDisabledTooltipKey,
             _liveStreamingEnabled,
-            _liveStreamingSession,
             _sharingVideo,
             t
         } = this.props;
@@ -1039,12 +1070,7 @@ class Toolbox extends Component<Props> {
                         : t('toolbar.enterFullScreen') } />,
             (_liveStreamingEnabled || _liveStreamingDisabledTooltipKey)
                 && this._shouldShowButton('livestreaming')
-                && <OverflowMenuLiveStreamingItem
-                    disabled = { !_liveStreamingEnabled }
-                    key = 'livestreaming'
-                    onClick = { this._onToolbarToggleLiveStreaming }
-                    session = { _liveStreamingSession }
-                    tooltip = { t(_liveStreamingDisabledTooltipKey) } />,
+                && this._renderLiveStreamingButton(),
             (_fileRecordingsEnabled || _fileRecordingsDisabledTooltipKey)
                 && this._shouldShowButton('recording')
                 && this._renderRecordingButton(),
@@ -1106,7 +1132,7 @@ class Toolbox extends Component<Props> {
      * current conference.
      *
      * @private
-     * @returns {ReactElement|null}
+     * @returns {ReactElement}
      */
     _renderRecordingButton() {
         const {
