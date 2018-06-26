@@ -1,1 +1,1 @@
-export * from './RecordingDelegateFlac';
+export * from './FlacAdapter';

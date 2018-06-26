@@ -1,10 +1,10 @@
-import { RecordingDelegate } from './RecordingDelegate';
+import { RecordingAdapter } from './RecordingAdapter';
 import { downloadBlob, timestampString } from './Utils';
 
 /**
  * Using mediaRecorder (default browser encoding ogg)
  */
-export class RecordingDelegateOgg extends RecordingDelegate {
+export class OggAdapter extends RecordingAdapter {
 
     _mediaRecorder = null;
 
