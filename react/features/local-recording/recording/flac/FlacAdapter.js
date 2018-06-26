@@ -22,7 +22,7 @@ export class FlacAdapter extends RecordingAdapter {
         if (this._encoder !== null) {
             return Promise.resolve();
         }
-   
+
         return new Promise((resolve, reject) => {
 
             try {
@@ -47,16 +47,16 @@ export class FlacAdapter extends RecordingAdapter {
                         from encoder (WebWorker): "${e.data.command}"!`);
                 }
             };
-    
+
             navigator.getUserMedia(
-    
+
                 // constraints - only audio needed for this app
                 {
                     audioBitsPerSecond: 44100, // 44 kbps
                     audio: true,
                     mimeType: 'application/ogg' // useless?
                 },
-    
+
                 // Success callback
                 stream => {
                     // this._mediaRecorder = new MediaRecorder(stream);
@@ -65,11 +65,10 @@ export class FlacAdapter extends RecordingAdapter {
                      = this._audioContext.createMediaStreamSource(stream);
                     this._audioProcessingNode
                       = this._audioContext.createScriptProcessor(4096, 1, 1);
-    
                     this._audioProcessingNode.onaudioprocess = e => {
                         // delegate to web worker
                         const channelLeft = e.inputBuffer.getChannelData(0);
-    
+
                         this._encoder.postMessage({
                             command: 'encode',
                             buf: channelLeft
@@ -77,7 +76,7 @@ export class FlacAdapter extends RecordingAdapter {
                     };
                     resolve();
                 },
-    
+
                 // Error callback
                 err => {
                     console.log(`The following gUM error occurred: ${err}`);
@@ -85,7 +84,7 @@ export class FlacAdapter extends RecordingAdapter {
                 }
             );
         });
-        
+
     }
 
     /**

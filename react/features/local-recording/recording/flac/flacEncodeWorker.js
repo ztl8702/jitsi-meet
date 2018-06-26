@@ -4,8 +4,9 @@
  * This file does not go through webpack.
  */
 
+/* eslint-disable */
 importScripts('/libs/libflac3-1.3.2.min.js');
-
+declare var Flac: Object;
 
 const FLAC_ERRORS = {
     0: 'FLAC__STREAM_ENCODER_OK', // The encoder is in the normal OK state and
@@ -254,10 +255,10 @@ class Encoder {
      *
      * @private
      * @param {*} buffer - The encoded Flac data.
-     * @param {*} bytes - Number of bytes in the data.
+     * @param {*} _bytes - Number of bytes in the data.
      * @returns {void}
      */
-    _onEncodedData(buffer, bytes) {
+    _onEncodedData(buffer, _bytes) {
         this._flacBuffers.push(buffer);
         this._flacLength += buffer.byteLength;
     }

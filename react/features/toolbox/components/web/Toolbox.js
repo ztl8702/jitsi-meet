@@ -38,7 +38,7 @@ import {
 } from '../../../recording';
 import {
     toggleDialog as toggleLocalRecording,
-    LocalRecordingButton 
+    LocalRecordingButton
 } from '../../../local-recording';
 import {
     SETTINGS_TABS,
@@ -184,6 +184,8 @@ type Props = {
      * Whether or not the local participant is sharing a YouTube video.
      */
     _sharingVideo: boolean,
+
+    _localRecState: Object,
 
     /**
      * Flag showing whether toolbar is visible.
