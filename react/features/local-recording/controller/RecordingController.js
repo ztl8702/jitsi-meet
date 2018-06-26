@@ -1,14 +1,13 @@
 import {
-    RecordingDelegateOgg,
-    RecordingDelegateFlac,
-    RecordingDelegateWav 
+    OggAdapter,
+    FlacAdapter,
+    WavAdapter,
+    RecordingAdapter
 } from '../recording';
 
 
 const COMMAND_START = 'localRecStart';
 const COMMAND_STOP = 'localRecStop';
-const COMMAND_CHANGE_CONFIG = 'localRecConfig';
-const COMMAND_CLIENT_UPDATE = 'localRecClientUpdate';
 
 const DEFAULT_RECORDING_FORMAT = 'flac';
 
@@ -160,10 +159,10 @@ export class RecordingController {
      * Callback function for XMPP event.
      *
      * @private
-     * @param {*} value - The event args.
+     * @param {*} _value - The event args.
      * @returns {void}
      */
-    _onStopCommand(value) {
+    _onStopCommand(_value) {
         if (this._state === ControllerState.RECORDING) {
             this._doStopRecording();
         }
@@ -235,18 +234,18 @@ export class RecordingController {
      * Creates recording delegate according to the current format.
      *
      * @private
-     * @returns {RecordingDelegate}
+     * @returns {RecordingAdapter}
      */
     _createRecordingDelegate() {
         console.log('RecordingController: format =', this._format);
 
         switch (this._format) {
         case 'ogg':
-            return new RecordingDelegateOgg();
+            return new OggAdapter();
         case 'flac':
-            return new RecordingDelegateFlac();
+            return new FlacAdapter();
         case 'wav':
-            return new RecordingDelegateWav();
+            return new WavAdapter();
         default:
             throw new Error(`Unknown format: ${this._format}`);
         }

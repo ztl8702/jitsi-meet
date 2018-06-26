@@ -29,7 +29,6 @@ import {
     setNotificationsEnabled,
     showWarningNotification
 } from '../../react/features/notifications';
-import { shouldShowOnlyDeviceSelection } from '../../react/features/settings';
 import {
     dockToolbox,
     setToolboxEnabled,

@@ -18,20 +18,6 @@ export function isSettingEnabled(settingName: string) {
     return interfaceConfig.SETTINGS_SECTIONS.includes(settingName);
 }
 
-declare var interfaceConfig: Object;
-
-/**
- * Used for web. Indicates if the setting section is enabled.
- *
- * @param {string} settingName - The name of the setting section as defined in
- * interface_config.js and SettingsMenu.js.
- * @returns {boolean} True to indicate that the given setting section
- * is enabled, false otherwise.
- */
-export function isSettingEnabled(settingName: string) {
-    return interfaceConfig.SETTINGS_SECTIONS.includes(settingName);
-}
-
 /**
  * Normalizes a URL entered by the user.
  * FIXME: Consider adding this to base/util/uri.

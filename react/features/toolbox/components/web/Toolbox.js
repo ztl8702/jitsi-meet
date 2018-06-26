@@ -259,6 +259,8 @@ class Toolbox extends Component<Props> {
             = this._onToolbarToggleRaiseHand.bind(this);
         this._onToolbarToggleRecording
             = this._onToolbarToggleRecording.bind(this);
+        this._onToolbarToggleLocalRecording
+            = this._onToolbarToggleLocalRecording.bind(this);
         this._onToolbarToggleScreenshare
             = this._onToolbarToggleScreenshare.bind(this);
         this._onToolbarToggleSharedVideo
@@ -399,6 +401,10 @@ class Toolbox extends Component<Props> {
                         visible = { this._shouldShowButton('camera') } />
                 </div>
                 <div className = 'button-group-right'>
+                    <LocalRecordingButton
+                        dispatch = { this.props.dispatch }
+                        isOn = { this.props._localRecState.showDialog }
+                        onClick = { this._onToolbarToggleLocalRecording } />
                     { this._shouldShowButton('invite')
                         && !_hideInviteButton
                         && <ToolbarButton

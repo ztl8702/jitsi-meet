@@ -10,7 +10,6 @@ import {
     setAudioOutputDevice,
     setVideoInputDevice
 } from '../base/devices';
-import { openDialog } from '../base/dialog';
 import { i18next } from '../base/i18n';
 import JitsiMeetJS from '../base/lib-jitsi-meet';
 
