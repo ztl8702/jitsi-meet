@@ -17,6 +17,7 @@ export class RecordingDelegateWav extends RecordingDelegate {
 
     _wavLength = 0;
     _wavBuffers = [];
+    _isInitialized = false;
 
     /**
      * Constructor.
@@ -25,42 +26,60 @@ export class RecordingDelegateWav extends RecordingDelegate {
     constructor() {
         super();
 
-        navigator.getUserMedia(
-
-            // constraints - only audio needed for this app
-            {
-                audioBitsPerSecond: WAV_SAMPLE_RATE * WAV_BITS_PER_SAMPLE,
-                audio: true,
-                mimeType: 'application/ogg' // useless?
-            },
-
-            // Success callback
-            stream => {
-
-                this._audioContext = new AudioContext();
-                this._audioSource
-                 = this._audioContext.createMediaStreamSource(stream);
-                this._audioProcessingNode
-                  = this._audioContext.createScriptProcessor(4096, 1, 1);
-
-                this._audioProcessingNode.onaudioprocess = e => {
-                    const channelLeft = e.inputBuffer.getChannelData(0);
-
-                    // https://developer.mozilla.org/en-US/docs/
-                    // Web/API/AudioBuffer/getChannelData
-                    // the returned value is an Float32Array
-
-                    this._saveWavPCM(channelLeft);
-                };
-            },
-
-            // Error callback
-            err => {
-                console.log(`The following gUM error occurred: ${err}`);
-            }
-        );
-
         this._saveWavPCM = this._saveWavPCM.bind(this);
+    }
+
+    /**
+     * Implements {@link RecordingDelegate.ensureInitialized}.
+     *
+     * @inheritdoc
+     */
+    ensureInitialized() {
+        if (this._isInitialized) {
+            return Promise.resolve();
+        }
+
+        const p = new Promise((resolve, reject) => {
+            navigator.getUserMedia(
+
+                // constraints - only audio needed for this app
+                {
+                    audioBitsPerSecond: WAV_SAMPLE_RATE * WAV_BITS_PER_SAMPLE,
+                    audio: true,
+                    mimeType: 'application/ogg' // useless?
+                },
+    
+                // Success callback
+                stream => {
+    
+                    this._audioContext = new AudioContext();
+                    this._audioSource
+                     = this._audioContext.createMediaStreamSource(stream);
+                    this._audioProcessingNode
+                      = this._audioContext.createScriptProcessor(4096, 1, 1);
+    
+                    this._audioProcessingNode.onaudioprocess = e => {
+                        const channelLeft = e.inputBuffer.getChannelData(0);
+    
+                        // https://developer.mozilla.org/en-US/docs/
+                        // Web/API/AudioBuffer/getChannelData
+                        // the returned value is an Float32Array
+    
+                        this._saveWavPCM(channelLeft);
+                    };
+                    this._isInitialized = true;
+                    resolve();
+                },
+    
+                // Error callback
+                err => {
+                    console.log(`The following gUM error occurred: ${err}`);
+                    reject();
+                }
+            );
+        });
+
+        return p;
     }
 
     /**
@@ -69,14 +88,16 @@ export class RecordingDelegateWav extends RecordingDelegate {
      * @inheritdoc
      */
     start() {
-
-        this._wavBuffers = [];
-        this._wavLength = 0;
-        this._wavBuffers.push(this._createWavHeader());
-
-
-        this._audioSource.connect(this._audioProcessingNode);
-        this._audioProcessingNode.connect(this._audioContext.destination);
+        return new Promise((resolve, _reject) => {
+            this._wavBuffers = [];
+            this._wavLength = 0;
+            this._wavBuffers.push(this._createWavHeader());
+    
+    
+            this._audioSource.connect(this._audioProcessingNode);
+            this._audioProcessingNode.connect(this._audioContext.destination);
+            resolve();
+        });
     }
 
     /**

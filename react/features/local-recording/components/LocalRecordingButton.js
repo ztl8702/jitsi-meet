@@ -5,7 +5,9 @@ import React, { Component } from 'react';
 import { ToolbarButton } from '../../toolbox';
 
 import LocalRecordingInfoDialog from './LocalRecordingInfoDialog';
+import { toggleRecording } from '../actions';
 
+import {showErrorNotification, showNotification} from '../../notifications';
 /**
  * A React {@code Component} for opening or closing the {@code OverflowMenu}.
  *
@@ -43,6 +45,39 @@ export class LocalRecordingButton extends Component {
 
         // Bind event handlers so they are only bound once per instance.
         this._onClick = this._onClick.bind(this);
+        this.componentWillMount = this.componentWillMount.bind(this);
+        this.componentWillUnmount = this.componentWillUnmount.bind(this);
+    }
+
+    /**
+     * 
+     */
+    componentWillMount() {
+
+        LocalRecording.controller.onStateChanged = function(state) {
+            this.props.dispatch(toggleRecording(state));
+        }.bind(this);
+
+        LocalRecording.controller.onWarning = function(message) {
+            this.props.dispatch(showErrorNotification({
+                title: 'Local recording',
+                description: message
+            }, 10000));
+        }.bind(this);
+    
+        LocalRecording.controller.onNotify = function(message) {
+            this.props.dispatch(showNotification({
+                title: 'Local recording',
+                description: message
+            }, 10000));
+        }.bind(this);
+    }
+
+
+    componentWillUnmount() {
+        LocalRecording.controller.onStateChanged = null;
+        LocalRecording.controller.onNotify = null;
+        LocalRecording.controller.onWarning = null;
     }
 
     /**
@@ -67,7 +102,7 @@ export class LocalRecordingButton extends Component {
                     <ToolbarButton
                         iconName = { iconClasses }
                         onClick = { this._onClick }
-                        tooltip = { 'Toggle Local Recording' } />
+                        tooltip = { 'Local Recording Controls' } />
                 </InlineDialog>
             </div>
         );

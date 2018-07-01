@@ -35,7 +35,7 @@ import {
     StopLiveStreamDialog,
     getActiveSession
 } from '../../../recording';
-import { toggleRecording as toggleLocalRecording, LocalRecordingButton } from '../../local-recording';
+import { toggleDialog as toggleLocalRecording, LocalRecordingButton } from '../../local-recording';
 import { SettingsButton } from '../../../settings';
 import { toggleSharedVideo } from '../../../shared-video';
 import { toggleChat } from '../../../side-panel';
@@ -380,7 +380,8 @@ class Toolbox extends Component<Props> {
                 </div>
                 <div className = 'button-group-right'>
                     <LocalRecordingButton
-                        isOn = { this.props._localRecState.on }
+                        dispatch = { this.props.dispatch } 
+                        isOn = { this.props._localRecState.showDialog }
                         onClick = { this._onToolbarToggleLocalRecording } />
                     { this._shouldShowButton('invite')
                         && !_hideInviteButton
