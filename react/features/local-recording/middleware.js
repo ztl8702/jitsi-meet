@@ -1,11 +1,11 @@
 /* @flow */
 
 import { MiddlewareRegistry } from '../base/redux';
-import { CONFERENCE_WILL_JOIN, CONFERENCE_JOINED } from '../base/conference';
+import { CONFERENCE_JOINED } from '../base/conference';
 
 declare var LocalRecording: Object;
 
-MiddlewareRegistry.register(({ dispatch, getState }) => next => action => {
+MiddlewareRegistry.register(({ getState }) => next => action => {
     const result = next(action);
 
     switch (action.type) {

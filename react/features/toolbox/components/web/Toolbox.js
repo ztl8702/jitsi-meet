@@ -330,8 +330,6 @@ class Toolbox extends Component<Props> {
      * @returns {ReactElement}
      */
     render() {
-        console.log("toolbox state",this.state);
-        console.log("toolbox props",this.props);
         const {
             _chatOpen,
             _hideInviteButton,
@@ -389,7 +387,7 @@ class Toolbox extends Component<Props> {
                 </div>
                 <div className = 'button-group-right'>
                     <LocalRecordingButton
-                        dispatch = { this.props.dispatch } 
+                        dispatch = { this.props.dispatch }
                         isOn = { this.props._localRecState.showDialog }
                         onClick = { this._onToolbarToggleLocalRecording } />
                     { this._shouldShowButton('invite')

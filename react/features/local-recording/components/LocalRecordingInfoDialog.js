@@ -85,26 +85,33 @@ class LocalRecordingInfoDialog extends Component<*> {
 
 
     /**
-     * sdf.
-     * 
+     * Returns React elements for displaying the local recording
+     * stats of each client.
+     *
+     * @returns {Component}
      */
     renderStats() {
         const { stats } = this.props;
-        
+
         if (stats === undefined) {
-            return (<ul />);
+            return <ul />;
         }
         const ids = Object.keys(stats);
 
         return (
             <ul>
                 {ids.map((id, i) =>
+                    /* eslint-disable */ // FIX: workaround for no-extra-parens
                     (<li key = { i }>
-                        <span>{stats[id].displayName || id} :</span>
+                        <span>{stats[id].displayName || id}: </span>
                         <span>{stats[id].recordingStats
-                            ? `${stats[id].recordingStats.isRecording ? 'On' : 'Off'} (${stats[id].recordingStats.currentSessionToken})`
+                            ? `${stats[id].recordingStats.isRecording
+                                ? 'On' : 'Off'} `
+                            + `(${stats[id]
+                                .recordingStats.currentSessionToken})`
                             : 'Unknown'}</span>
                     </li>)
+                    /* eslint-enable */
                 )}
             </ul>
         );

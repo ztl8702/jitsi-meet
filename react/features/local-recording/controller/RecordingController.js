@@ -66,11 +66,12 @@ export class RecordingController {
     registerEvents: () => void;
 
     /**
-     * Register XMPP events.
+     * Registers listeners for XMPP events.
      *
+     * @param {JitsiConference} conference - JitsiConference instance.
      * @returns {void}
      */
-    registerEvents(conference) {
+    registerEvents(conference: Object) {
         if (!this._registered) {
             this._conference = conference;
             if (this._conference) {
@@ -91,8 +92,8 @@ export class RecordingController {
     startRecording() {
         this.registerEvents();
         if (this._conference && this._conference.isModerator()) {
-                this._conference.removeCommand(COMMAND_STOP);
-                this._conference.sendCommand(COMMAND_START, {
+            this._conference.removeCommand(COMMAND_STOP);
+            this._conference.sendCommand(COMMAND_START, {
                 attributes: {
                     sessionToken: this._getRandomToken(),
                     format: this._format
@@ -113,10 +114,10 @@ export class RecordingController {
         if (this._conference) {
             if (this._conference.isModerator) {
                 this._conference.removeCommand(COMMAND_START);
-                this._conference.sendCommand(COMMAND_STOP,{
+                this._conference.sendCommand(COMMAND_STOP, {
                     attributes: {
                         sessionToken: this._currentSessionToken
-                   }
+                    }
                 });
             } else if (this.onWarning) {
                 this.onWarning('You are not the moderator. '
@@ -153,49 +154,71 @@ export class RecordingController {
         // will be used next time
     }
 
+    /**
+     * Returns the local recording stats.
+     *
+     * @returns {RecordingStats}
+     */
     getLocalStats(): RecordingStats {
         return {
             currentSessionToken: this._currentSessionToken,
             isRecording: this._state === ControllerState.RECORDING,
             recordedBytes: 0,
             recordedLength: 0
-        }
+        };
     }
 
     getParticipantsStats: () => *;
 
+    /**
+     * Returns the remote participants' local recording stats.
+     *
+     * @returns {*}
+     */
     getParticipantsStats() {
-        const members = 
-            this._conference.getParticipants()
-            .map(member => ({
-                id: member.getId(),
-                displayName: member.getDisplayName(),
-                recordingStats: JSON.parse(member.getProperty(PROPERTY_STATS) || '{}'),
-                isSelf: false
-        }));
+        const members
+            = this._conference.getParticipants()
+            .map(member => {
+                return {
+                    id: member.getId(),
+                    displayName: member.getDisplayName(),
+                    recordingStats:
+                        JSON.parse(member.getProperty(PROPERTY_STATS) || '{}'),
+                    isSelf: false
+                };
+            });
 
         // transform into a dictionary,
-        // for consistent ordering 
-        let result = {};
+        // for consistent ordering
+        const result = {};
+
         for (let i = 0; i < members.length; ++i) {
             result[members[i].id] = members[i];
         }
         const localId = this._conference.myUserId();
+
         result[localId] = {
             id: localId,
             displayName: 'local user',
             recordingStats: this.getLocalStats(),
             isSelf: true
         };
+
         return result;
     }
 
     _updateStats: () => void;
 
+    /**
+     * Sends out updates about the local recording stats via XMPP.
+     *
+     * @private
+     * @returns {void}
+     */
     _updateStats() {
         if (this._conference) {
-            this._conference.setLocalParticipantProperty(PROPERTY_STATS, 
-                JSON.stringify(this.getLocalStats()))
+            this._conference.setLocalParticipantProperty(PROPERTY_STATS,
+                JSON.stringify(this.getLocalStats()));
         }
     }
 
@@ -280,6 +303,7 @@ export class RecordingController {
                 }
                 this._updateStats();
             });
+
             // @todo catch
 
         }
@@ -312,7 +336,8 @@ export class RecordingController {
                     }
                     this._updateStats();
                 });
-                //@ todo catch 
+
+            // @ todo catch
         }
 
         /* eslint-disable */
@@ -333,11 +358,11 @@ export class RecordingController {
 
         switch (this._format) {
         case 'ogg':
-            return new RecordingDelegateOgg();
+            return new OggAdapter();
         case 'flac':
-            return new RecordingDelegateFlac();
+            return new FlacAdapter();
         case 'wav':
-            return new RecordingDelegateWav();
+            return new WavAdapter();
         default:
             throw new Error(`Unknown format: ${this._format}`);
         }

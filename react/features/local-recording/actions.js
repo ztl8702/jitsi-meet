@@ -1,3 +1,5 @@
+/* @flow */
+
 import {
     LOCAL_RECORDING_ON,
     LOCAL_RECORDING_OFF,
@@ -16,7 +18,7 @@ import {
  *     type: LOCAL_RECORDING_OFF
  * }}
  */
-export function toggleRecording(on) {
+export function toggleRecording(on: boolean) {
     return {
         type: on ? LOCAL_RECORDING_ON : LOCAL_RECORDING_OFF
     };
@@ -52,8 +54,14 @@ export function clockTick() {
 }
 
 /**
- * 
- * @param {*} stats 
+ * Creates a Redux event that carries the local recording
+ * stats from each client.
+ *
+ * @param {*} stats - The stats object.
+ * @returns {{
+ *     type: LOCAL_RECORDING_STATS_UPDATE,
+ *     stats: Object
+ * }}
  */
 export function statsUpdate(stats: Object) {
     return {
