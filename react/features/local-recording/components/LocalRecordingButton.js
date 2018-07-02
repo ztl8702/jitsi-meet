@@ -10,8 +10,8 @@ import LocalRecordingInfoDialog from './LocalRecordingInfoDialog';
 import { toggleRecording } from '../actions';
 
 import { showErrorNotification, showNotification } from '../../notifications';
+import { recordingController } from '../controller';
 
-declare var LocalRecording: Object;
 
 /**
  * A React {@code Component} for opening or closing the {@code OverflowMenu}.
@@ -59,18 +59,18 @@ export class LocalRecordingButton extends Component<*> {
      */
     componentWillMount() {
 
-        LocalRecording.controller.onStateChanged = function(state) {
+        recordingController.onStateChanged = function(state) {
             this.props.dispatch(toggleRecording(state));
         }.bind(this);
 
-        LocalRecording.controller.onWarning = function(message) {
+        recordingController.onWarning = function(message) {
             this.props.dispatch(showErrorNotification({
                 title: 'Local recording',
                 description: message
             }, 10000));
         }.bind(this);
 
-        LocalRecording.controller.onNotify = function(message) {
+        recordingController.onNotify = function(message) {
             this.props.dispatch(showNotification({
                 title: 'Local recording',
                 description: message
@@ -84,9 +84,9 @@ export class LocalRecordingButton extends Component<*> {
      * @returns {void}
      */
     componentWillUnmount() {
-        LocalRecording.controller.onStateChanged = null;
-        LocalRecording.controller.onNotify = null;
-        LocalRecording.controller.onWarning = null;
+        recordingController.onStateChanged = null;
+        recordingController.onNotify = null;
+        recordingController.onWarning = null;
     }
 
     /**

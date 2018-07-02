@@ -7,7 +7,7 @@ const WAV_SAMPLE_RATE = 44100;
 
 
 /**
- * Raw wav format recording
+ * Recording adapter for raw WAVE format.
  */
 export class WavAdapter extends RecordingAdapter {
 
@@ -30,7 +30,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate.ensureInitialized}.
+     * Implements {@link RecordingDelegate#ensureInitialized}.
      *
      * @inheritdoc
      */
@@ -80,7 +80,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate.start}.
+     * Implements {@link RecordingDelegate#start}.
      *
      * @inheritdoc
      */
@@ -99,7 +99,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate.stop}.
+     * Implements {@link RecordingDelegate#stop}.
      *
      * @inheritdoc
      */
@@ -112,7 +112,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate.download}.
+     * Implements {@link RecordingDelegate#download}.
      *
      * @inheritdoc
      */

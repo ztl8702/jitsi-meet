@@ -34,7 +34,7 @@ type RecordingStats = {
 /**
  * Recoding coordination, across multiple participants
  */
-export class RecordingController {
+class RecordingController {
 
     _delegates = {};
     _conference: * = null;
@@ -368,3 +368,5 @@ export class RecordingController {
         }
     }
 }
+
+export const recordingController = new RecordingController();

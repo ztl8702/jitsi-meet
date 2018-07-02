@@ -10,8 +10,7 @@ import {
 } from '../../base/participants';
 
 import { clockTick, statsUpdate } from '../actions';
-
-declare var LocalRecording: Object;
+import { recordingController } from '../controller';
 
 /**
  * A React Component with the contents for a dialog that shows information about
@@ -61,8 +60,8 @@ class LocalRecordingInfoDialog extends Component<*> {
                 this.props.dispatch(clockTick());
                 try {
                     this.props.dispatch(
-                        statsUpdate(LocalRecording
-                        .controller.getParticipantsStats()));
+                        statsUpdate(recordingController
+                            .getParticipantsStats()));
                 } catch (e) {
                     // do nothing
                 }
@@ -236,23 +235,23 @@ class LocalRecordingInfoDialog extends Component<*> {
     }
 
     /**
-     * Callback function for the Start action.
+     * Callback function for the Start UI action.
      *
      * @private
      * @returns {void}
      */
     _onStart() {
-        LocalRecording.signalStart();
+        recordingController.startRecording();
     }
 
     /**
-     * Callback function for the Stop action.
+     * Callback function for the Stop UI action.
      *
      * @private
      * @returns {void}
      */
     _onStop() {
-        LocalRecording.signalEnd();
+        recordingController.stopRecording();
     }
 
 }
@@ -294,4 +293,3 @@ function _mapStateToProps(state) {
 }
 
 export default connect(_mapStateToProps)(LocalRecordingInfoDialog);
-

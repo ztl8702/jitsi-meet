@@ -2,7 +2,7 @@ import { RecordingAdapter } from '../RecordingAdapter';
 import { downloadBlob, timestampString } from '../Utils';
 
 /**
- * Uses libflac in the background
+ * Recording adapter that uses libflac in the background
  */
 export class FlacAdapter extends RecordingAdapter {
 

@@ -1,7 +1,5 @@
 /**
  * WebWorker that does FLAC encoding using libflac.js
- *
- * This file does not go through webpack.
  */
 
 /* eslint-disable */
@@ -9,27 +7,34 @@ importScripts('/libs/libflac3-1.3.2.min.js');
 declare var Flac: Object;
 
 const FLAC_ERRORS = {
-    0: 'FLAC__STREAM_ENCODER_OK', // The encoder is in the normal OK state and
+    // The encoder is in the normal OK state and
     // samples can be processed.
-    1: 'FLAC__STREAM_ENCODER_UNINITIALIZED', // The encoder is in the
+    0: 'FLAC__STREAM_ENCODER_OK',
+    // The encoder is in the
     // uninitialized state one of the FLAC__stream_encoder_init_*() functions
     // must be called before samples can be processed.
-    2: 'FLAC__STREAM_ENCODER_OGG_ERROR', // An error occurred in the underlying
-    // Ogg layer.
-    3: 'FLAC__STREAM_ENCODER_VERIFY_DECODER_ERROR', // An error occurred in the
+    1: 'FLAC__STREAM_ENCODER_UNINITIALIZED',
+    // An error occurred in the underlying Ogg layer.
+    2: 'FLAC__STREAM_ENCODER_OGG_ERROR',
+    // An error occurred in the
     // underlying verify stream decoder; check
     // FLAC__stream_encoder_get_verify_decoder_state().
-    4: 'FLAC__STREAM_ENCODER_VERIFY_MISMATCH_IN_AUDIO_DATA', // The verify
-    // decoder detected a mismatch between the original audio signal and
-    // the decoded audio signal.
-    5: 'FLAC__STREAM_ENCODER_CLIENT_ERROR', // One of the callbacks returned
+    3: 'FLAC__STREAM_ENCODER_VERIFY_DECODER_ERROR', 
+    // The verify decoder detected a mismatch between the
+    // original audio signal and the decoded audio signal.
+    4: 'FLAC__STREAM_ENCODER_VERIFY_MISMATCH_IN_AUDIO_DATA', 
+    // One of the callbacks returned
     // a fatal error.
-    6: 'FLAC__STREAM_ENCODER_IO_ERROR', // An I/O error occurred while
+    5: 'FLAC__STREAM_ENCODER_CLIENT_ERROR', 
+    // An I/O error occurred while
     // opening/reading/writing a file. Check errno.
-    7: 'FLAC__STREAM_ENCODER_FRAMING_ERROR', // An error occurred while writing
+    6: 'FLAC__STREAM_ENCODER_IO_ERROR', 
+    // An error occurred while writing
     // the stream; usually, the write_callback returned an error.
-    8: 'FLAC__STREAM_ENCODER_MEMORY_ALLOCATION_ERROR' // Memory allocation
+    7: 'FLAC__STREAM_ENCODER_FRAMING_ERROR', 
+    // Memory allocation
     // failed.
+    8: 'FLAC__STREAM_ENCODER_MEMORY_ALLOCATION_ERROR' 
 };
 
 const EncoderState = Object.freeze({
