@@ -3,6 +3,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import moment from 'moment';
 
 import {
     PARTICIPANT_ROLE,
@@ -50,7 +51,7 @@ class LocalRecordingInfoDialog extends Component<*> {
 
 
     /**
-     * Implements {@link Component.componentWillMount}.
+     * Implements React's {@link Component#componentWillMount()}.
      *
      * @returns {void}
      */
@@ -71,7 +72,7 @@ class LocalRecordingInfoDialog extends Component<*> {
     }
 
     /**
-     * Implements {@link Component.componentWillUnmount}.
+     * Implements React's {@link Component#componentWillUnmount()}.
      *
      * @returns {void}
      */
@@ -87,7 +88,7 @@ class LocalRecordingInfoDialog extends Component<*> {
      * Returns React elements for displaying the local recording
      * stats of each client.
      *
-     * @returns {Component}
+     * @returns {ReactElement}
      */
     renderStats() {
         const { stats } = this.props;
@@ -100,7 +101,10 @@ class LocalRecordingInfoDialog extends Component<*> {
         return (
             <ul>
                 {ids.map((id, i) =>
-                    /* eslint-disable */ // FIX: workaround for no-extra-parens
+
+                    // FIXME: workaround, as arrow functions without `return`
+                    // keyword need to be wrapped in parenthesis.
+                    /* eslint-disable no-extra-parens */
                     (<li key = { i }>
                         <span>{stats[id].displayName || id}: </span>
                         <span>{stats[id].recordingStats
@@ -110,7 +114,7 @@ class LocalRecordingInfoDialog extends Component<*> {
                                 .recordingStats.currentSessionToken})`
                             : 'Unknown'}</span>
                     </li>)
-                    /* eslint-enable */
+                    /* eslint-enable no-extra-parens */
                 )}
             </ul>
         );
@@ -207,30 +211,11 @@ class LocalRecordingInfoDialog extends Component<*> {
      * @returns {string}
      */
     _getDuration(now, prev) {
-        // a hack. better ways to do time diff?
-
-        const diff = new Date(now - prev);
-
-        const seconds = diff.getUTCSeconds();
-        const minutes = diff.getUTCMinutes();
-        const hours = diff.getUTCHours();
-
-        /**
-         * Zero padding.
-         *
-         * @param {number} num - 0-60.
-         * @returns {string}
-         */
-        function zeroPad(num) {
-            if (num < 10) {
-                return `0${num}`;
-            }
-
-            return num.toString();
-        }
-
-        return `${zeroPad(hours)}:${zeroPad(minutes)}:${zeroPad(seconds)}`;
-
+        // still a hack, as moment.js does not support formatting of duration
+        // (i.e. TimeDelta). Will only work if total duration is < 24 hours.
+        // But who s going to have a 24-hour long conference?
+        return moment(now - prev).utc()
+            .format('HH:mm:ss');
     }
 
     /**
@@ -275,7 +260,7 @@ function _mapStateToProps(state) {
         currentTime,
         recordingStartedAt,
         encodingFormat,
-        on: isOn,
+        isEngaged: isOn,
         stats
     } = state['features/local-recording'];
     const isModerator
