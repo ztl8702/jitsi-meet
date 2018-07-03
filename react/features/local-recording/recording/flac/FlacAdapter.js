@@ -1,5 +1,12 @@
 import { RecordingAdapter } from '../RecordingAdapter';
 import { downloadBlob, timestampString } from '../Utils';
+import {
+    DEBUG,
+    MAIN_THREAD_FINISH,
+    MAIN_THREAD_INIT,
+    MAIN_THREAD_NEW_DATA_ARRIVED,
+    WORKER_BLOB_READY
+} from './messageTypes';
 
 const logger = require('jitsi-meet-logger').getLogger(__filename);
 
@@ -27,21 +34,34 @@ export class FlacAdapter extends RecordingAdapter {
 
         return new Promise((resolve, reject) => {
 
+            // FIXME: workaround for different file names in development/
+            // production environments.
+            // We cannot import flacEncodeWorker as a webpack module,
+            // because it is in a different bundle and should be lazy-loaded
+            // only when flac recording is in use.
             try {
+                // try load the minified version first
                 this._encoder = new Worker('/libs/flacEncodeWorker.min.js');
-            } catch (e) {
-                this._encoder = new Worker('/libs/flacEncodeWorker.js');
+            } catch (exception1) {
+                // if failed, try un minified version
+                try {
+                    this._encoder = new Worker('/libs/flacEncodeWorker.js');
+                } catch (exception2) {
+                    logger.error('Failed to load flacEncodeWorker.');
+                    reject();
+                }
             }
 
+            // set up listen for messages from the WebWorker
             this._encoder.onmessage = e => {
-                if (e.data.command === 'end') {
+                if (e.data.command === WORKER_BLOB_READY) {
                     // receiving blob
                     this._data = e.data.buf;
                     if (this._stopPromiseResolver !== null) {
                         this._stopPromiseResolver();
                         this._stopPromiseResolver = null;
                     }
-                } else if (e.data.cmd === 'debug') {
+                } else if (e.data.cmd === DEBUG) {
                     logger.log(e.data);
                 } else {
                     logger.error(
@@ -67,11 +87,11 @@ export class FlacAdapter extends RecordingAdapter {
                     this._audioProcessingNode
                       = this._audioContext.createScriptProcessor(4096, 1, 1);
                     this._audioProcessingNode.onaudioprocess = e => {
-                        // delegate to web worker
+                        // delegate to the WebWorker to do the encoding
                         const channelLeft = e.inputBuffer.getChannelData(0);
 
                         this._encoder.postMessage({
-                            command: 'encode',
+                            command: MAIN_THREAD_NEW_DATA_ARRIVED,
                             buf: channelLeft
                         });
                     };
@@ -95,7 +115,7 @@ export class FlacAdapter extends RecordingAdapter {
      */
     start() {
         this._encoder.postMessage({
-            command: 'init',
+            command: MAIN_THREAD_INIT,
             config: {
                 sampleRate: 44100,
                 bps: 16
@@ -118,7 +138,7 @@ export class FlacAdapter extends RecordingAdapter {
             this._audioSource.disconnect();
             this._stopPromiseResolver = resolve;
             this._encoder.postMessage({
-                command: 'finish'
+                command: MAIN_THREAD_FINISH
             });
         });
     }

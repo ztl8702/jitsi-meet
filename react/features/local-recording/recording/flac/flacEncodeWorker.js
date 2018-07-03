@@ -1,3 +1,10 @@
+import {
+    MAIN_THREAD_FINISH,
+    MAIN_THREAD_INIT,
+    MAIN_THREAD_NEW_DATA_ARRIVED,
+    WORKER_BLOB_READY
+} from './messageTypes';
+
 /**
  * WebWorker that does FLAC encoding using libflac.js
  */
@@ -57,11 +64,30 @@ const FLAC_ERRORS = {
     8: 'FLAC__STREAM_ENCODER_MEMORY_ALLOCATION_ERROR'
 };
 
+/**
+ * States of the {@code Encoder}.
+ */
 const EncoderState = Object.freeze({
-    UNINTIALISED: Symbol('uninitialised'),
+    /**
+     * Initial state, when libflac.js is not initialized.
+     */
+    UNINTIALIZED: Symbol('uninitialized'),
+
+    /**
+     * Actively encoding new audio bits.
+     */
     WORKING: Symbol('working'),
+
+    /**
+     * Encoding has finished and encoded bits are available.
+     */
     FINISHED: Symbol('finished')
 });
+
+/**
+ * Default compression level.
+ */
+const FLAC_COMPRESSION_LEVEL = 5;
 
 /**
  * Concat multiple Uint8Arrays into one.
@@ -91,35 +117,47 @@ function mergeUint8Arrays(arrays, totalLength) {
 class Encoder {
 
     /**
-     * Flac encoder instance ID. (As per libflac.js API)
+     * Flac encoder instance ID. (As per libflac.js API).
      * @private
      */
     _encoderId = 0;
 
     /**
-     * Sample rate
+     * Sample rate.
      * @private
      */
     _sampleRate;
 
     /**
-     * Bit depth (bits per sample)
+     * Bit depth (bits per sample).
      * @private
      */
     _bitDepth;
 
     /**
-     * Buffer size
+     * Buffer size.
      * @private
      */
     _bufferSize;
 
+    /**
+     * Buffers to store encoded bits temporarily.
+     */
     _flacBuffers = [];
 
+    /**
+     * Length of encoded FLAC bits.
+     */
     _flacLength = 0;
 
-    _state = EncoderState.UNINTIALISED;
+    /**
+     * The current state of the {@code Encoder}.
+     */
+    _state = EncoderState.UNINTIALIZED;
 
+    /**
+     * The ready-for-grab downloadable blob.
+     */
     _data = null;
 
 
@@ -143,19 +181,28 @@ class Encoder {
         // create the encoder
         this._encoderId = Flac.init_libflac_encoder(
             this._sampleRate,
-            1, // Mono channel
+
+            // Mono channel
+            1,
             this._bitDepth,
-            5, // Compression level TODO: change this later
-            0, // Unknown total samples,
-            true, // Checksum TODO: i don't know what this is
-            0 // Auto determine block size (samples per frame)
+
+            FLAC_COMPRESSION_LEVEL,
+
+            // Pass 0 in becuase of unknown total samples,
+            0,
+
+            // checksum, FIXME: double-check whether this is necessary
+            true,
+
+            // Auto-determine block size (samples per frame)
+            0
         );
 
         if (this._encoderId === 0) {
             throw new Error('Failed to create libflac encoder.');
         }
 
-        // initialise the encoder
+        // initialize the encoder
         const initResult = Flac.init_encoder_stream(
             this._encoderId,
             this._onEncodedData.bind(this),
@@ -187,7 +234,7 @@ class Encoder {
 
         // convert to Uint32,
         // appearantly libflac requires 32-bit signed integer input
-        // but why unsigned 32bit array?
+        // FIXME: why unsigned 32bit array?
         const bufferI32 = new Int32Array(bufferLength);
         const view = new DataView(bufferI32.buffer);
         const volume = 1;
@@ -296,7 +343,7 @@ class Encoder {
      * @returns {void}
      */
     _onMetadataAvailable = () => {
-        // do nothing
+        // reserved for future use
     }
 }
 
@@ -306,7 +353,7 @@ let encoder = null;
 self.onmessage = function(e) {
 
     switch (e.data.command) {
-    case 'init':
+    case MAIN_THREAD_INIT:
     {
         const bps = e.data.config.bps;
         const sampleRate = e.data.config.sampleRate;
@@ -323,7 +370,7 @@ self.onmessage = function(e) {
         break;
     }
 
-    case 'encode':
+    case MAIN_THREAD_NEW_DATA_ARRIVED:
         if (encoder === null) {
             console
                 .error('flacEncoderWorker:'
@@ -333,14 +380,14 @@ self.onmessage = function(e) {
         }
         break;
 
-    case 'finish':
+    case MAIN_THREAD_FINISH:
         if (encoder !== null) {
             encoder.finish();
             const data = encoder.getBlob();
 
             self.postMessage(
                 {
-                    command: 'end',
+                    command: WORKER_BLOB_READY,
                     buf: data
                 }
             );

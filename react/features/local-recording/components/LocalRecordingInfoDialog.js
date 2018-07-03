@@ -1,9 +1,9 @@
 /* @flow */
 
+import moment from 'moment';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import moment from 'moment';
 
 import {
     PARTICIPANT_ROLE,
@@ -206,14 +206,14 @@ class LocalRecordingInfoDialog extends Component<*> {
     /**
      * Creates a duration string "HH:MM:SS" from two Date objects.
      *
-     * @param {Date} now - .
-     * @param {Date} prev - .
+     * @param {Date} now - Current time.
+     * @param {Date} prev - Previous time, the time to be subtracted.
      * @returns {string}
      */
     _getDuration(now, prev) {
-        // still a hack, as moment.js does not support formatting of duration
+        // Still a hack, as moment.js does not support formatting of duration
         // (i.e. TimeDelta). Will only work if total duration is < 24 hours.
-        // But who s going to have a 24-hour long conference?
+        // But who is going to have a 24-hour long conference?
         return moment(now - prev).utc()
             .format('HH:mm:ss');
     }

@@ -1,8 +1,8 @@
 /* @flow */
 
 import {
-    OggAdapter,
     FlacAdapter,
+    OggAdapter,
     WavAdapter
 } from '../recording';
 
@@ -30,9 +30,18 @@ const PROPERTY_STATS = 'localRecStats';
  */
 const DEFAULT_RECORDING_FORMAT = 'flac';
 
-
+/**
+ * States of the {@code RecordingController}.
+ */
 const ControllerState = Object.freeze({
+    /**
+     * Idle (not recording).
+     */
     IDLE: Symbol('idle'),
+
+    /**
+     * Engaged (recording).
+     */
     RECORDING: Symbol('recording')
 });
 
@@ -253,7 +262,7 @@ class RecordingController {
             this._format = format;
             this._currentSessionToken = sessionToken;
             this._delegates[sessionToken]
-                 = this._createRecordingDelegate();
+                 = this._createRecordingAdapter();
             this._doStartRecording();
         } else if (this._currentSessionToken !== sessionToken) {
             // we need to restart the recording
@@ -261,7 +270,7 @@ class RecordingController {
                 this._format = format;
                 this._currentSessionToken = sessionToken;
                 this._delegates[sessionToken]
-                    = this._createRecordingDelegate();
+                    = this._createRecordingAdapter();
                 this._doStartRecording();
             });
         }
