@@ -48,6 +48,7 @@
     "js-md5": "0.6.1",
     "jwt-decode": "2.2.0",
     "lib-jitsi-meet": "github:jitsi/lib-jitsi-meet#98acf1336df7a6fe6fc27c16c829ef607ec20ceb",
+    "libflac": "git+https://github.com/ztl8702/libflac.git#31368097eaf9dcb5ef59365ef60b259cb7b97f07",
     "lodash": "4.17.4",
     "moment": "2.19.4",
     "postis": "2.2.0",
