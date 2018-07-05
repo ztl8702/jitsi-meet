@@ -387,7 +387,6 @@ class Toolbox extends Component<Props> {
                 </div>
                 <div className = 'button-group-right'>
                     <LocalRecordingButton
-                        dispatch = { this.props.dispatch }
                         isDialogShown = { this.props._localRecState.showDialog }
                         onClick = {
                             this._onToolbarToggleLocalRecordingInfoDialog

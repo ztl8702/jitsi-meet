@@ -6,7 +6,6 @@ const logger = require('jitsi-meet-logger').getLogger(__filename);
 const WAV_BITS_PER_SAMPLE = 16;
 const WAV_SAMPLE_RATE = 44100;
 
-
 /**
  * Recording adapter for raw WAVE format.
  */

@@ -6,18 +6,12 @@ import React, { Component } from 'react';
 import { ToolbarButton } from '../../toolbox';
 
 import LocalRecordingInfoDialog from './LocalRecordingInfoDialog';
-import { signalLocalRecordingEngagement } from '../actions';
 
-import { showErrorNotification, showNotification } from '../../notifications';
-import { recordingController } from '../controller';
-
-
+/**
+ * The type of the React {@code Component} state of
+ * {@link LocalRecordingButton}.
+ */
 type Props = {
-
-    /**
-     * Redux dispatch function.
-     */
-    dispatch: Function,
 
     /**
      * Whether or not LocalRecordingInfoDialog should be displayed.
@@ -49,43 +43,6 @@ export class LocalRecordingButton extends Component<Props> {
 
         // Bind event handlers so they are only bound once per instance.
         this._onClick = this._onClick.bind(this);
-    }
-
-    /**
-     * Implements {@link Component.componentWillMount}.
-     *
-     * @returns {void}
-     */
-    componentWillMount() {
-
-        recordingController.onStateChanged = function(state) {
-            this.props.dispatch(signalLocalRecordingEngagement(state));
-        }.bind(this);
-
-        recordingController.onWarning = function(message) {
-            this.props.dispatch(showErrorNotification({
-                title: 'Local recording',
-                description: message
-            }, 10000));
-        }.bind(this);
-
-        recordingController.onNotify = function(message) {
-            this.props.dispatch(showNotification({
-                title: 'Local recording',
-                description: message
-            }, 10000));
-        }.bind(this);
-    }
-
-    /**
-     * Implements {@link Component.componentWillUnmount}.
-     *
-     * @returns {void}
-     */
-    componentWillUnmount() {
-        recordingController.onStateChanged = null;
-        recordingController.onNotify = null;
-        recordingController.onWarning = null;
     }
 
     /**
@@ -139,6 +96,8 @@ export class LocalRecordingButton extends Component<Props> {
      * @returns {void}
      */
     _onCloseDialog() {
-        // do nothing
+        // Do nothing for now, because we want the dialog to stay open
+        // after certain time, otherwise the moderator might need to repeatly
+        // open the dialog to see the stats.
     }
 }

@@ -384,11 +384,12 @@ class RecordingController {
                     this.onStateChanged(true);
                 }
                 this._updateStats();
+            })
+            .catch(err => {
+                logger.error('Failed to start local recording.', err);
             });
-
-            // @todo catch
-
         }
+
     }
 
     _doStopRecording: () => Promise<void>;
