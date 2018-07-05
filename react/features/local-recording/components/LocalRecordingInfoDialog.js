@@ -1,7 +1,6 @@
 /* @flow */
 
 import moment from 'moment';
-import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
@@ -10,37 +9,56 @@ import {
     getLocalParticipant
 } from '../../base/participants';
 
-import { clockTick, statsUpdate } from '../actions';
+import { statsUpdate } from '../actions';
 import { recordingController } from '../controller';
+
+
+/**
+ * The type of the React {@code Component} props of
+ * {@link LocalRecordingInfoDialog}.
+ */
+type Props = {
+    dispatch: Dispatch<*>,
+    encodingFormat: string,
+    isModerator: boolean,
+    isOn: boolean,
+    recordingStartedAt: Date,
+    stats: Object
+}
+
+/**
+ * The type of the React {@code Component} state of
+ * {@link LocalRecordingInfoDialog}.
+ */
+type State = {
+
+    /**
+     * The recording duration string to be displayed on the UI.
+     */
+    durationString: string
+}
 
 /**
  * A React Component with the contents for a dialog that shows information about
- * the current conference.
+ * local recording. For users with moderator rights, this is also the "control
+ * panel" for starting/stopping local recording on all clients.
  *
  * @extends Component
  */
-class LocalRecordingInfoDialog extends Component<*> {
-    /**
-     * {@code InfoDialog} component's property types.
-     *
-     * @static
-     */
-    static propTypes = {
+class LocalRecordingInfoDialog extends Component<Props, State> {
 
-        /**
-         * The size (in bytes) of encoded audio in memory
-         *
-         */
-        currentTime: PropTypes.object,
-        dispatch: PropTypes.func,
-        encodingFormat: PropTypes.string,
-        isModerator: PropTypes.bool,
-        isOn: PropTypes.bool,
-        recordingStartedAt: PropTypes.object,
-        stats: PropTypes.object
-    };
 
     _timer: ?IntervalID;
+
+    /**
+     * Constructor.
+     */
+    constructor() {
+        super();
+        this.state = {
+            durationString: 'N/A'
+        };
+    }
 
     /**
      * Initializes new {@code InfoDialog} instance.
@@ -58,7 +76,14 @@ class LocalRecordingInfoDialog extends Component<*> {
     componentWillMount() {
         this._timer = setInterval(
             () => {
-                this.props.dispatch(clockTick());
+                this.setState((_prevState, props) => {
+                    const nowTime = new Date(Date.now());
+
+                    return {
+                        durationString: this._getDuration(nowTime,
+                            props.recordingStartedAt)
+                    };
+                });
                 try {
                     this.props.dispatch(
                         statsUpdate(recordingController
@@ -127,8 +152,9 @@ class LocalRecordingInfoDialog extends Component<*> {
      * @returns {ReactElement}
      */
     render() {
-        const { isModerator, recordingStartedAt,
-            currentTime, encodingFormat, isOn } = this.props;
+        const { isModerator, encodingFormat, isOn } = this.props;
+
+        const { durationString } = this.state;
 
         return (
             <div
@@ -157,7 +183,7 @@ class LocalRecordingInfoDialog extends Component<*> {
                         </span>
                         <span className = 'spacer'>&nbsp;</span>
                         <span className = 'info-value'>
-                            {this._getDuration(currentTime, recordingStartedAt)}
+                            {durationString}
                         </span>
                     </div>
                     }
@@ -247,7 +273,6 @@ class LocalRecordingInfoDialog extends Component<*> {
  * @param {Object} state - The Redux state.
  * @private
  * @returns {{
- *     currentTime: Date,
  *     encodingFormat: string,
  *     isModerator: boolean,
  *     isOn: boolean,
@@ -257,7 +282,6 @@ class LocalRecordingInfoDialog extends Component<*> {
  */
 function _mapStateToProps(state) {
     const {
-        currentTime,
         encodingFormat,
         isEngaged: isOn,
         recordingStartedAt,
@@ -267,7 +291,6 @@ function _mapStateToProps(state) {
         = getLocalParticipant(state).role === PARTICIPANT_ROLE.MODERATOR;
 
     return {
-        currentTime,
         encodingFormat,
         isModerator,
         isOn,

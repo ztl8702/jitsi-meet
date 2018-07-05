@@ -38,8 +38,3 @@ export const LOCAL_RECORDING_TOGGLE_DIALOG
  */
 export const LOCAL_RECORDING_STATS_UPDATE
     = Symbol('LOCAL_RECORDING_STATS_UPDATE');
-
-/**
- * FIXME: Action for updating the UI every second.
- */
-export const CLOCK_TICK = Symbol('CLOCK_TICK');

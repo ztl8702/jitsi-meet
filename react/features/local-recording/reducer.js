@@ -2,13 +2,13 @@
 
 import { ReducerRegistry } from '../base/redux';
 import {
-    CLOCK_TICK,
     LOCAL_RECORDING_ENGAGED,
     LOCAL_RECORDING_STATS_UPDATE,
     LOCAL_RECORDING_TOGGLE_DIALOG,
     LOCAL_RECORDING_UNENGAGED
 } from './actionTypes';
 import { recordingController } from './controller';
+
 const logger = require('jitsi-meet-logger').getLogger(__filename);
 
 ReducerRegistry.register('features/local-recording', (state = {}, action) => {
@@ -34,11 +34,6 @@ ReducerRegistry.register('features/local-recording', (state = {}, action) => {
             ...state,
             showDialog: state.showDialog === undefined
                 || state.showDialog === false
-        };
-    case CLOCK_TICK:
-        return {
-            ...state,
-            currentTime: new Date(Date.now())
         };
     case LOCAL_RECORDING_STATS_UPDATE:
         return {

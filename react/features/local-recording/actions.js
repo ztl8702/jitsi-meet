@@ -3,7 +3,6 @@
 import {
     LOCAL_RECORDING_ENGAGED,
     LOCAL_RECORDING_UNENGAGED,
-    CLOCK_TICK,
     LOCAL_RECORDING_TOGGLE_DIALOG,
     LOCAL_RECORDING_STATS_UPDATE
 } from './actionTypes';
@@ -39,22 +38,6 @@ export function signalLocalRecordingEngagement(isEngaged: boolean) {
 export function toggleLocalRecordingInfoDialog() {
     return {
         type: LOCAL_RECORDING_TOGGLE_DIALOG
-    };
-}
-
-/**
- * FIXME: Creates an event that represents a clock tick.
- * This is used for updating the "recording length" field in
- * the Local Recording Info dialog, forcing the UI to re-render
- * on each clock tick.
- *
- * @returns {{
- *     type: CLOCK_TICK
- * }}
- */
-export function clockTick() {
-    return {
-        type: CLOCK_TICK
     };
 }
 
