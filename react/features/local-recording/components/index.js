@@ -1,1 +1,1 @@
-export * from './LocalRecordingButton';
+export { default as LocalRecordingButton } from './LocalRecordingButton';

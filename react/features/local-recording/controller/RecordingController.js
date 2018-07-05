@@ -1,5 +1,6 @@
 /* @flow */
 
+import { i18next } from '../../base/i18n';
 import {
     FlacAdapter,
     OggAdapter,
@@ -37,12 +38,12 @@ const ControllerState = Object.freeze({
     /**
      * Idle (not recording).
      */
-    IDLE: Symbol('idle'),
+    IDLE: Symbol('IDLE'),
 
     /**
      * Engaged (recording).
      */
-    RECORDING: Symbol('recording')
+    RECORDING: Symbol('RECORDING')
 });
 
 /**
@@ -58,6 +59,7 @@ type RecordingStats = {
 /**
  * The component responsible for the coordination of local recording, across
  * multiple participants.
+ * Current implementation requires that there is only one moderator in a room.
  */
 class RecordingController {
 
@@ -115,20 +117,20 @@ class RecordingController {
      * UI it wants to display a notice. Keeps {@code RecordingController}
      * decoupled from UI.
      */
-    onNotify: ?(string) => void = null;
+    onNotify: ?(string) => void;
 
     /**
      * FIXME: callback function for the {@code RecordingController} to notify
      * UI it wants to display a warning. Keeps {@code RecordingController}
      * decoupled from UI.
      */
-    onWarning: ?(string) => void = null;
+    onWarning: ?(string) => void;
 
     /**
      * FIXME: callback function for the {@code RecordingController} to notify
      * UI that the local recording state has changed.
      */
-    onStateChanged: ?(boolean) => void = null;
+    onStateChanged: ?(boolean) => void;
 
     /**
      * Constructor.
@@ -181,9 +183,12 @@ class RecordingController {
                     format: this._format
                 }
             });
-        } else if (this.onWarning) {
-            this.onWarning('You are not the moderator. '
-            + 'You cannot change recording status.');
+        } else {
+            const message = i18next.t('localRecording.messages.notModerator');
+
+            if (this.onWarning) {
+                this.onWarning(message);
+            }
         }
     }
 
@@ -201,9 +206,13 @@ class RecordingController {
                         sessionToken: this._currentSessionToken
                     }
                 });
-            } else if (this.onWarning) {
-                this.onWarning('You are not the moderator. '
-                + 'You cannot change recording status.');
+            } else {
+                const message
+                    = i18next.t('localRecording.messages.notModerator');
+
+                if (this.onWarning) {
+                    this.onWarning(message);
+                }
             }
         }
     }
@@ -281,7 +290,7 @@ class RecordingController {
 
         result[localId] = {
             id: localId,
-            displayName: 'local user',
+            displayName: i18next.t('localRecording.localUser'),
             recordingStats: this.getLocalStats(),
             isSelf: true
         };
@@ -377,8 +386,10 @@ class RecordingController {
             .then(() => delegate.start())
             .then(() => {
                 logger.log('Local recording engaged.');
+                const message = i18next.t('localRecording.messages.engaged');
+
                 if (this.onNotify) {
-                    this.onNotify('Local recording started.');
+                    this.onNotify(message);
                 }
                 if (this.onStateChanged) {
                     this.onStateChanged(true);
@@ -410,17 +421,24 @@ class RecordingController {
                     this._state = ControllerState.IDLE;
                     logger.log('Local recording unengaged.');
                     this.downloadRecordedData(token);
+
+                    const message
+                        = i18next.t('localRecording.messages.finished',
+                            {
+                                token
+                            });
+
                     if (this.onNotify) {
-                        this.onNotify(`Recording session ${token} finished. `
-                        + 'Please send the recorded file to the moderator.');
+                        this.onNotify(message);
                     }
                     if (this.onStateChanged) {
                         this.onStateChanged(false);
                     }
                     this._updateStats();
+                })
+                .catch(err => {
+                    logger.error('Failed to stop local recording.', err);
                 });
-
-            // @ todo catch
         }
 
         /* eslint-disable */

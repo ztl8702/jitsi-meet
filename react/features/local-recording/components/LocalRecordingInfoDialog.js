@@ -4,6 +4,7 @@ import moment from 'moment';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
+import { translate } from '../../base/i18n';
 import {
     PARTICIPANT_ROLE,
     getLocalParticipant
@@ -23,7 +24,12 @@ type Props = {
     isModerator: boolean,
     isOn: boolean,
     recordingStartedAt: Date,
-    stats: Object
+    stats: Object,
+
+    /**
+     * Invoked to obtain translated strings.
+     */
+    t: Function
 }
 
 /**
@@ -116,7 +122,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
      * @returns {ReactElement}
      */
     renderStats() {
-        const { stats } = this.props;
+        const { stats, t } = this.props;
 
         if (stats === undefined) {
             return <ul />;
@@ -134,10 +140,11 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                         <span>{stats[id].displayName || id}: </span>
                         <span>{stats[id].recordingStats
                             ? `${stats[id].recordingStats.isRecording
-                                ? 'On' : 'Off'} `
+                                ? t('localRecording.clientState.on')
+                                : t('localRecording.clientState.off')} `
                             + `(${stats[id]
                                 .recordingStats.currentSessionToken})`
-                            : 'Unknown'}</span>
+                            : t('localRecording.clientState.unknown')}</span>
                     </li>)
                     /* eslint-enable no-extra-parens */
                 )}
@@ -152,7 +159,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
      * @returns {ReactElement}
      */
     render() {
-        const { isModerator, encodingFormat, isOn } = this.props;
+        const { isModerator, encodingFormat, isOn, t } = this.props;
 
         const { durationString } = this.state;
 
@@ -166,35 +173,37 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                 </div>
                 <div className = 'info-dialog-column'>
                     <div className = 'info-dialog-title'>
-                        Local Recording
+                        { t('localRecording.localRecording') }
                     </div>
                     <div className = 'info-dialog-conference-url'>
                         <span className = 'info-label'>
-                            Moderator:
+                            {`${t('localRecording.moderator')}:`}
                         </span>
                         <span className = 'spacer'>&nbsp;</span>
                         <span className = 'info-value'>
-                            {isModerator ? 'Yes' : 'No'}
+                            { isModerator
+                                ? t('localRecording.yes')
+                                : t('localRecording.no') }
                         </span>
                     </div>
                     { isOn && <div className = 'info-dialog-conference-url'>
                         <span className = 'info-label'>
-                                Duration:
+                            {`${t('localRecording.duration')}:`}
                         </span>
                         <span className = 'spacer'>&nbsp;</span>
                         <span className = 'info-value'>
-                            {durationString}
+                            { durationString }
                         </span>
                     </div>
                     }
                     {isOn
                     && <div className = 'info-dialog-conference-url'>
                         <span className = 'info-label'>
-                            Encoding:
+                            {`${t('localRecording.encoding')}:`}
                         </span>
                         <span className = 'spacer'>&nbsp;</span>
                         <span className = 'info-value'>
-                            {encodingFormat}
+                            { encodingFormat }
                         </span>
                     </div>
                     }
@@ -209,12 +218,12 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                                     {isOn ? <a
                                         className = 'info-copy'
                                         onClick = { this._onStop }>
-                                        {'Stop'}
+                                        { t('localRecording.stop') }
                                     </a>
                                         : <a
                                             className = 'info-copy'
                                             onClick = { this._onStart }>
-                                            {'Start'}
+                                            { t('localRecording.start') }
                                         </a>
 
                                     }
@@ -299,4 +308,4 @@ function _mapStateToProps(state) {
     };
 }
 
-export default connect(_mapStateToProps)(LocalRecordingInfoDialog);
+export default translate(connect(_mapStateToProps)(LocalRecordingInfoDialog));

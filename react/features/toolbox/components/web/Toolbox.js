@@ -30,15 +30,15 @@ import {
 } from '../../../invite';
 import { openKeyboardShortcutsDialog } from '../../../keyboard-shortcuts';
 import {
+    toggleLocalRecordingInfoDialog,
+    LocalRecordingButton
+} from '../../../local-recording';
+import {
     RecordButton,
     StartLiveStreamDialog,
     StopLiveStreamDialog,
     getActiveSession
 } from '../../../recording';
-import {
-    toggleLocalRecordingInfoDialog,
-    LocalRecordingButton
-} from '../../../local-recording';
 import {
     SETTINGS_TABS,
     SettingsButton,

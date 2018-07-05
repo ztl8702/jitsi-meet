@@ -3,6 +3,7 @@
 import InlineDialog from '@atlaskit/inline-dialog';
 import React, { Component } from 'react';
 
+import { translate } from '../../base/i18n';
 import { ToolbarButton } from '../../toolbox';
 
 import LocalRecordingInfoDialog from './LocalRecordingInfoDialog';
@@ -14,23 +15,28 @@ import LocalRecordingInfoDialog from './LocalRecordingInfoDialog';
 type Props = {
 
     /**
-     * Whether or not LocalRecordingInfoDialog should be displayed.
+     * Whether or not {@link LocalRecordingInfoDialog} should be displayed.
      */
     isDialogShown: boolean,
 
     /**
-     * Callback function called when LocalRecordingButton is clicked.
+     * Callback function called when {@link LocalRecordingButton} is clicked.
      */
-    onClick: Function
+    onClick: Function,
+
+    /**
+     * Invoked to obtain translated strings.
+     */
+    t: Function
 }
 
 /**
- * A React {@code Component} for opening or closing
- * the {@code LocalRecordingInfoDialog}.
+ * A React {@code Component} for opening or closing the
+ * {@code LocalRecordingInfoDialog}.
  *
  * @extends Component
  */
-export class LocalRecordingButton extends Component<Props> {
+class LocalRecordingButton extends Component<Props> {
 
     /**
      * Initializes a new {@code LocalRecordingButton} instance.
@@ -52,7 +58,7 @@ export class LocalRecordingButton extends Component<Props> {
      * @returns {ReactElement}
      */
     render() {
-        const { isDialogShown } = this.props;
+        const { isDialogShown, t } = this.props;
         const iconClasses
             = `icon-thumb-menu ${isDialogShown
                 ? 'icon-rec toggled' : 'icon-rec'}`;
@@ -69,7 +75,7 @@ export class LocalRecordingButton extends Component<Props> {
                     <ToolbarButton
                         iconName = { iconClasses }
                         onClick = { this._onClick }
-                        tooltip = { 'Local Recording Controls' } />
+                        tooltip = { t('localRecording.dialogTitle') } />
                 </InlineDialog>
             </div>
         );
@@ -101,3 +107,5 @@ export class LocalRecordingButton extends Component<Props> {
         // open the dialog to see the stats.
     }
 }
+
+export default translate(LocalRecordingButton);
