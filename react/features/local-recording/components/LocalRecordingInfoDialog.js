@@ -85,8 +85,8 @@ class LocalRecordingInfoDialog extends Component<*> {
 
 
     /**
-     * Returns React elements for displaying the local recording
-     * stats of each client.
+     * Returns React elements for displaying the local recording stats of
+     * each client.
      *
      * @returns {ReactElement}
      */
@@ -242,36 +242,36 @@ class LocalRecordingInfoDialog extends Component<*> {
 
 /**
  * Maps (parts of) the Redux state to the associated props for the
- * {@code InfoDialog} component.
+ * {@code LocalRecordingInfoDialog} component.
  *
  * @param {Object} state - The Redux state.
  * @private
  * @returns {{
- *     _canEditPassword: boolean,
- *     _conference: Object,
- *     _conferenceName: string,
- *     _inviteURL: string,
- *     _locked: string,
- *     _password: string
+ *     currentTime: Date,
+ *     encodingFormat: string,
+ *     isModerator: boolean,
+ *     isOn: boolean,
+ *     recordingStartedAt: Date,
+ *     stats: Object
  * }}
  */
 function _mapStateToProps(state) {
     const {
         currentTime,
-        recordingStartedAt,
         encodingFormat,
         isEngaged: isOn,
+        recordingStartedAt,
         stats
     } = state['features/local-recording'];
     const isModerator
         = getLocalParticipant(state).role === PARTICIPANT_ROLE.MODERATOR;
 
     return {
-        isOn,
-        isModerator,
         currentTime,
-        recordingStartedAt,
         encodingFormat,
+        isModerator,
+        isOn,
+        recordingStartedAt,
         stats
     };
 }

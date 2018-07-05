@@ -12,7 +12,7 @@ export class OggAdapter extends RecordingAdapter {
     _mediaRecorder = null;
 
     /**
-     * Implements {@link RecordingDelegate#ensureInitialized()}.
+     * Implements {@link RecordingAdapter#ensureInitialized()}.
      *
      * @inheritdoc
      */
@@ -55,7 +55,7 @@ export class OggAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate.start}.
+     * Implements {@link RecordingAdapter#start()}.
      *
      * @inheritdoc
      */
@@ -67,7 +67,7 @@ export class OggAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate.stop}.
+     * Implements {@link RecordingAdapter#stop()}.
      *
      * @inheritdoc
      */
@@ -81,7 +81,7 @@ export class OggAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate.download}.
+     * Implements {@link RecordingAdapter#download()}.
      *
      * @inheritdoc
      */

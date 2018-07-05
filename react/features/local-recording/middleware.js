@@ -20,4 +20,3 @@ MiddlewareRegistry.register(({ getState }) => next => action => {
 
     return result;
 });
-

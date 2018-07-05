@@ -31,7 +31,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate#ensureInitialized}.
+     * Implements {@link RecordingAdapter#ensureInitialized()}.
      *
      * @inheritdoc
      */
@@ -81,7 +81,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate#start}.
+     * Implements {@link RecordingAdapter#start()}.
      *
      * @inheritdoc
      */
@@ -100,7 +100,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate#stop}.
+     * Implements {@link RecordingAdapter#stop()}.
      *
      * @inheritdoc
      */
@@ -113,7 +113,7 @@ export class WavAdapter extends RecordingAdapter {
     }
 
     /**
-     * Implements {@link RecordingDelegate#download}.
+     * Implements {@link RecordingAdapter#download()}.
      *
      * @inheritdoc
      */
