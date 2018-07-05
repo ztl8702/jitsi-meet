@@ -1,6 +1,8 @@
 import { RecordingAdapter } from '../RecordingAdapter';
 import { downloadBlob, timestampString } from '../Utils';
 
+const logger = require('jitsi-meet-logger').getLogger(__filename);
+
 /**
  * Recording adapter that uses libflac in the background
  */
@@ -14,7 +16,7 @@ export class FlacAdapter extends RecordingAdapter {
     _stopPromiseResolver = null;
 
     /**
-     * Implements {@link RecordingDelegate.ensureInitialized}.
+     * Implements {@link RecordingDelegate#ensureInitialized}.
      *
      * @inheritdoc
      */
@@ -40,9 +42,9 @@ export class FlacAdapter extends RecordingAdapter {
                         this._stopPromiseResolver = null;
                     }
                 } else if (e.data.cmd === 'debug') {
-                    console.log(e.data);
+                    logger.log(e.data);
                 } else {
-                    console.error(
+                    logger.error(
                         `Unknown event
                         from encoder (WebWorker): "${e.data.command}"!`);
                 }
@@ -78,7 +80,7 @@ export class FlacAdapter extends RecordingAdapter {
 
                 // Error callback
                 err => {
-                    console.log(`The following gUM error occurred: ${err}`);
+                    logger.error(`Error calling getUserMedia(): ${err}`);
                     reject();
                 }
             );
@@ -129,8 +131,6 @@ export class FlacAdapter extends RecordingAdapter {
     download() {
         if (this._data !== null) {
             const audioURL = window.URL.createObjectURL(this._data);
-
-            console.log('Audio URL:', audioURL);
 
             downloadBlob(audioURL, `recording${timestampString()}.flac`);
         }

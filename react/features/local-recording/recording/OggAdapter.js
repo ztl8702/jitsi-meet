@@ -1,15 +1,18 @@
 import { RecordingAdapter } from './RecordingAdapter';
 import { downloadBlob, timestampString } from './Utils';
 
+const logger = require('jitsi-meet-logger').getLogger(__filename);
+
 /**
- * Using mediaRecorder (default browser encoding ogg)
+ * RecordingAdapter implementation that uses MediaRecorder
+ * (default browser encoding in Opus/ogg)
  */
 export class OggAdapter extends RecordingAdapter {
 
     _mediaRecorder = null;
 
     /**
-     * Implements {@link RecordingDelegate.ensureInitialized}.
+     * Implements {@link RecordingDelegate#ensureInitialized()}.
      *
      * @inheritdoc
      */
@@ -20,16 +23,15 @@ export class OggAdapter extends RecordingAdapter {
             p = new Promise((resolve, error) => {
                 navigator.getUserMedia(
 
-                    // constraints - only audio needed for this app
+                    // constraints, only audio needed
                     {
                         audioBitsPerSecond: 44100, // 44 kbps
                         audio: true,
                         mimeType: 'application/ogg'
                     },
 
-                    // Success callback
+                    // success callback
                     stream => {
-                        // myAudioStream = stream;
                         this._mediaRecorder = new MediaRecorder(stream);
                         this._mediaRecorder.ondataavailable
                             = e => this._saveMediaData(e.data);
@@ -38,7 +40,7 @@ export class OggAdapter extends RecordingAdapter {
 
                     // Error callback
                     err => {
-                        console.log(`The following gUM error occurred: ${err}`);
+                        logger.error(`Error calling getUserMedia(): ${err}`);
                         error();
                     }
                 );
@@ -87,7 +89,6 @@ export class OggAdapter extends RecordingAdapter {
         if (this._recordedData !== null) {
             const audioURL = window.URL.createObjectURL(this._recordedData);
 
-            console.log('Audio URL:', audioURL);
             downloadBlob(audioURL, `recording${timestampString()}.ogg`);
         }
 

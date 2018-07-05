@@ -226,7 +226,7 @@ class Encoder {
 
             const status = Flac.FLAC__stream_encoder_finish(this._encoderId);
 
-            console.log('flac finish: ', status);
+            console.log('flac encoding finish: ', status);
 
             // free up resources
             Flac.FLAC__stream_encoder_delete(this._encoderId);

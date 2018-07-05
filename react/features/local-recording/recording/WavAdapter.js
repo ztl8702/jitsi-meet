@@ -1,6 +1,7 @@
 import { RecordingAdapter } from './RecordingAdapter';
 import { downloadBlob, timestampString } from './Utils';
 
+const logger = require('jitsi-meet-logger').getLogger(__filename);
 
 const WAV_BITS_PER_SAMPLE = 16;
 const WAV_SAMPLE_RATE = 44100;
@@ -70,7 +71,7 @@ export class WavAdapter extends RecordingAdapter {
 
                 // Error callback
                 err => {
-                    console.log(`The following gUM error occurred: ${err}`);
+                    logger.error(`Error calling getUserMedia(): ${err}`);
                     reject();
                 }
             );
@@ -119,8 +120,6 @@ export class WavAdapter extends RecordingAdapter {
     download() {
         if (this._data !== null) {
             const audioURL = window.URL.createObjectURL(this._data);
-
-            console.log('Audio URL:', audioURL);
 
             downloadBlob(audioURL, `recording${timestampString()}.wav`);
         }

@@ -6,6 +6,8 @@ import {
     WavAdapter
 } from '../recording';
 
+const logger = require('jitsi-meet-logger').getLogger(__filename);
+
 /**
  * XMPP command for signaling the start of local recording to all clients.
  * Should be sent by the moderator only.
@@ -150,7 +152,7 @@ class RecordingController {
         if (this._delegates[sessionToken]) {
             this._delegates[sessionToken].download();
         } else {
-            console.error(`Invalid session token for download ${sessionToken}`);
+            logger.error(`Invalid session token for download ${sessionToken}`);
         }
     }
 
@@ -162,7 +164,7 @@ class RecordingController {
      */
     switchFormat(newFormat: string) {
         this._format = newFormat;
-        console.log(`Recording format switched to ${newFormat}`);
+        logger.log(`Recording format switched to ${newFormat}`);
 
         // will be used next time
     }
@@ -307,7 +309,7 @@ class RecordingController {
             delegate.ensureInitialized()
             .then(() => delegate.start())
             .then(() => {
-                console.log('Recording starts');
+                logger.log('Local recording engaged.');
                 if (this.onNotify) {
                     this.onNotify('Local recording started.');
                 }
@@ -338,7 +340,7 @@ class RecordingController {
                 .stop()
                 .then(() => {
                     this._state = ControllerState.IDLE;
-                    console.log('Recording stopped.');
+                    logger.log('Local recording unengaged.');
                     this.downloadRecordedData(token);
                     if (this.onNotify) {
                         this.onNotify(`Recording session ${token} finished. `
@@ -361,13 +363,14 @@ class RecordingController {
     }
 
     /**
-     * Creates recording delegate according to the current format.
+     * Creates recording adapter according to the current format.
      *
      * @private
-     * @returns {RecordingDelegate}
+     * @returns {RecordingAdapter}
      */
-    _createRecordingDelegate() {
-        console.log('RecordingController: format =', this._format);
+    _createRecordingAdapter() {
+        logger.trace('[RecordingController] creating recording'
+            + ` adapter for ${this._format} format.`);
 
         switch (this._format) {
         case 'ogg':

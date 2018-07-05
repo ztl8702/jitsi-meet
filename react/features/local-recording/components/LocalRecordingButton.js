@@ -31,7 +31,8 @@ type Props = {
 }
 
 /**
- * A React {@code Component} for opening or closing the {@code OverflowMenu}.
+ * A React {@code Component} for opening or closing
+ * the {@code LocalRecordingInfoDialog}.
  *
  * @extends Component
  */
