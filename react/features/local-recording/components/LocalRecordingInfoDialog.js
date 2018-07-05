@@ -19,11 +19,36 @@ import { recordingController } from '../controller';
  * {@link LocalRecordingInfoDialog}.
  */
 type Props = {
+
+    /**
+     * Redux store dispatch function.
+     */
     dispatch: Dispatch<*>,
+
+    /**
+     * Current encoding format.
+     */
     encodingFormat: string,
+
+    /**
+     * Whether the local user is the moderator.
+     */
     isModerator: boolean,
+
+    /**
+     * Whether local recording is engaged.
+     */
     isOn: boolean,
+
+    /**
+     * The start time of the current local recording session.
+     * Used to calculate the duration of recording.
+     */
     recordingStartedAt: Date,
+
+    /**
+     * Stats of all the participant.
+     */
     stats: Object,
 
     /**
@@ -53,7 +78,10 @@ type State = {
  */
 class LocalRecordingInfoDialog extends Component<Props, State> {
 
-
+    /**
+     * Saves a handle to the timer for UI updates,
+     * so that it can be cancelled when the component unmounts.
+     */
     _timer: ?IntervalID;
 
     /**
@@ -65,14 +93,6 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
             durationString: 'N/A'
         };
     }
-
-    /**
-     * Initializes new {@code InfoDialog} instance.
-     *
-     * @param {Object} props - The read-only properties with which the new
-     * instance is to be initialized.
-     */
-
 
     /**
      * Implements React's {@link Component#componentWillMount()}.
@@ -117,7 +137,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
 
     /**
      * Returns React elements for displaying the local recording stats of
-     * each client.
+     * each participant.
      *
      * @returns {ReactElement}
      */
@@ -133,7 +153,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
             <ul>
                 {ids.map((id, i) =>
 
-                    // FIXME: workaround, as arrow functions without `return`
+                    // FIXME: a workaround, as arrow functions without `return`
                     // keyword need to be wrapped in parenthesis.
                     /* eslint-disable no-extra-parens */
                     (<li key = { i }>
@@ -160,7 +180,6 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
      */
     render() {
         const { isModerator, encodingFormat, isOn, t } = this.props;
-
         const { durationString } = this.state;
 
         return (
@@ -223,24 +242,19 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                             && <div className = 'info-dialog-action-links'>
                                 <div className = 'info-dialog-action-link'>
                                     {isOn ? <a
-                                        className = 'info-copy'
                                         onClick = { this._onStop }>
                                         { t('localRecording.stop') }
                                     </a>
                                         : <a
-                                            className = 'info-copy'
                                             onClick = { this._onStart }>
                                             { t('localRecording.start') }
                                         </a>
 
                                     }
-
                                 </div>
                             </div>
                     }
-
                 </div>
-
             </div>
         );
     }
@@ -254,7 +268,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
      */
     _getDuration(now, prev) {
         // Still a hack, as moment.js does not support formatting of duration
-        // (i.e. TimeDelta). Will only work if total duration is < 24 hours.
+        // (i.e. TimeDelta). Only works if total duration < 24 hours.
         // But who is going to have a 24-hour long conference?
         return moment(now - prev).utc()
             .format('HH:mm:ss');

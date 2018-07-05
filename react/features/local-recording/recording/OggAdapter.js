@@ -5,7 +5,7 @@ const logger = require('jitsi-meet-logger').getLogger(__filename);
 
 /**
  * RecordingAdapter implementation that uses MediaRecorder
- * (default browser encoding in Opus/ogg)
+ * (default browser encoding with Opus codec)
  */
 export class OggAdapter extends RecordingAdapter {
 

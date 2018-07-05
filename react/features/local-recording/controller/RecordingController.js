@@ -47,12 +47,28 @@ const ControllerState = Object.freeze({
 });
 
 /**
- * Type of the stats reported by each client.
+ * Type of the stats reported by each participant (client).
  */
 type RecordingStats = {
+
+    /**
+     * Current local recording session token used by the participant.
+     */
     currentSessionToken: number,
+
+    /**
+     * Whether local recording is engaged on the participant's device.
+     */
     isRecording: boolean,
+
+    /**
+     * Total recorded bytes. (Reserved for future use.)
+     */
     recordedBytes: number,
+
+    /**
+     * Total recording duration. (Reserved for future use.)
+     */
     recordedLength: number
 }
 
@@ -372,7 +388,7 @@ class RecordingController {
     _doStartRecording: () => void;
 
     /**
-     * Starts the recording.
+     * Starts the recording locally.
      *
      * @private
      * @returns {void}
@@ -406,7 +422,7 @@ class RecordingController {
     _doStopRecording: () => Promise<void>;
 
     /**
-     * Stops the recording.
+     * Stops the recording locally.
      *
      * @private
      * @returns {Promise<void>}

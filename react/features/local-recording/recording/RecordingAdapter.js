@@ -31,7 +31,7 @@ export class RecordingAdapter {
     }
 
     /**
-     * Initiates download.
+     * Initiates download of the recorded and encoded audio file.
      *
      * @returns {void}
      */

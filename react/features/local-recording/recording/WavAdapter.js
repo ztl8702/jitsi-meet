@@ -251,7 +251,7 @@ export class WavAdapter extends RecordingAdapter {
 function writeUTFBytes(view, offset, string) {
     const lng = string.length;
 
-    // big endianness
+    // convert to big endianness
     for (let i = 0; i < lng; ++i) {
         view.setUint8(offset + i, string.charCodeAt(i));
     }
