@@ -1,44 +1,49 @@
 /* @flow */
 
 import {
-    LOCAL_RECORDING_ON,
-    LOCAL_RECORDING_OFF,
+    LOCAL_RECORDING_ENGAGED,
+    LOCAL_RECORDING_UNENGAGED,
     CLOCK_TICK,
     LOCAL_RECORDING_TOGGLE_DIALOG,
     LOCAL_RECORDING_STATS_UPDATE
 } from './actionTypes';
 
 /**
- * Creates an event for switching local recording on or off.
+ * Signals state change in local recording engagement.
+ * In other words, the events of the local WebWorker / MediaRecorder
+ * starting to record and finishing recording.
  *
- * @param {bool} on - Whether to switch local recording on or off.
+ * Note that this is not the event fired when the users tries to start
+ * the recording in the UI.
+ *
+ * @param {bool} isEngaged - Whether local recording is engaged or not.
  * @returns {{
- *     type: LOCAL_RECORDING_ON
+ *     type: LOCAL_RECORDING_ENGAGED
  * }|{
- *     type: LOCAL_RECORDING_OFF
+ *     type: LOCAL_RECORDING_UNENGAGED
  * }}
  */
-export function toggleRecording(on: boolean) {
+export function signalLocalRecordingEngagement(isEngaged: boolean) {
     return {
-        type: on ? LOCAL_RECORDING_ON : LOCAL_RECORDING_OFF
+        type: isEngaged ? LOCAL_RECORDING_ENGAGED : LOCAL_RECORDING_UNENGAGED
     };
 }
 
 /**
- * Creates an event for toggling the Local Recording Info dialog.
+ * Toggles the open/close state of {@code LocalRecordingInfoDialog}.
  *
  * @returns {{
  *     type: LOCAL_RECORDING_TOGGLE_DIALOG
  * }}
  */
-export function toggleDialog() {
+export function toggleLocalRecordingInfoDialog() {
     return {
         type: LOCAL_RECORDING_TOGGLE_DIALOG
     };
 }
 
 /**
- * Creates an event that represents a clock tick.
+ * FIXME: Creates an event that represents a clock tick.
  * This is used for updating the "recording length" field in
  * the Local Recording Info dialog, forcing the UI to re-render
  * on each clock tick.
@@ -54,8 +59,8 @@ export function clockTick() {
 }
 
 /**
- * Creates a Redux event that carries the local recording
- * stats from each client.
+ * Updates the the local recording stats from each client,
+ * to be displayed on {@code LocalRecordingInfoDialog}.
  *
  * @param {*} stats - The stats object.
  * @returns {{

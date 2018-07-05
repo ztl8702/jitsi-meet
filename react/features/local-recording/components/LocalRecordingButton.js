@@ -1,56 +1,54 @@
 /* @flow */
 
 import InlineDialog from '@atlaskit/inline-dialog';
-import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 
 import { ToolbarButton } from '../../toolbox';
 
 import LocalRecordingInfoDialog from './LocalRecordingInfoDialog';
-import { toggleRecording } from '../actions';
+import { signalLocalRecordingEngagement } from '../actions';
 
 import { showErrorNotification, showNotification } from '../../notifications';
 import { recordingController } from '../controller';
 
+
+type Props = {
+
+    /**
+     * Redux dispatch function.
+     */
+    dispatch: Function,
+
+    /**
+     * Whether or not LocalRecordingInfoDialog should be displayed.
+     */
+    isDialogShown: boolean,
+
+    /**
+     * Callback function called when LocalRecordingButton is clicked.
+     */
+    onClick: Function
+}
 
 /**
  * A React {@code Component} for opening or closing the {@code OverflowMenu}.
  *
  * @extends Component
  */
-export class LocalRecordingButton extends Component<*> {
-    /**
-     * {@code OverflowMenuButton} component's property types.
-     *
-     * @static
-     */
-    static propTypes = {
-        dispatch: PropTypes.func,
-
-        /**
-         * Whether or not the OverflowMenu popover should display.
-         */
-        isOn: PropTypes.bool,
-
-        /**
-         * Calback to change the visiblility of the overflow menu.
-         */
-        onClick: PropTypes.func
-    };
+export class LocalRecordingButton extends Component<Props> {
 
     /**
-     * Initializes a new {@code OverflowMenuButton} instance.
+     * Initializes a new {@code LocalRecordingButton} instance.
      *
      * @param {Object} props - The read-only properties with which the new
      * instance is to be initialized.
      */
-    constructor(props: *) {
+    constructor(props: Props) {
         super(props);
 
         // Bind event handlers so they are only bound once per instance.
         this._onClick = this._onClick.bind(this);
     }
-
 
     /**
      * Implements {@link Component.componentWillMount}.
@@ -60,7 +58,7 @@ export class LocalRecordingButton extends Component<*> {
     componentWillMount() {
 
         recordingController.onStateChanged = function(state) {
-            this.props.dispatch(toggleRecording(state));
+            this.props.dispatch(signalLocalRecordingEngagement(state));
         }.bind(this);
 
         recordingController.onWarning = function(message) {
@@ -96,9 +94,10 @@ export class LocalRecordingButton extends Component<*> {
      * @returns {ReactElement}
      */
     render() {
-        const { isOn } = this.props;
+        const { isDialogShown } = this.props;
         const iconClasses
-            = `icon-thumb-menu ${isOn ? 'icon-rec toggled' : 'icon-rec'}`;
+            = `icon-thumb-menu ${isDialogShown
+                ? 'icon-rec toggled' : 'icon-rec'}`;
 
         return (
             <div className = 'toolbox-button-wth-dialog'>
@@ -106,7 +105,7 @@ export class LocalRecordingButton extends Component<*> {
                     content = {
                         <LocalRecordingInfoDialog />
                     }
-                    isOpen = { isOn }
+                    isOpen = { isDialogShown }
                     onClose = { this._onCloseDialog }
                     position = { 'top right' }>
                     <ToolbarButton
@@ -117,7 +116,6 @@ export class LocalRecordingButton extends Component<*> {
             </div>
         );
     }
-
 
     _onClick: () => void;
 

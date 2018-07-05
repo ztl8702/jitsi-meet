@@ -6,13 +6,26 @@ import {
     WavAdapter
 } from '../recording';
 
-declare var APP: Object;
-
+/**
+ * XMPP command for signaling the start of local recording to all clients.
+ * Should be sent by the moderator only.
+ */
 const COMMAND_START = 'localRecStart';
+
+/**
+ * XMPP command for signaling the stop of local recording to all clients.
+ * Should be sent by the moderator only.
+ */
 const COMMAND_STOP = 'localRecStop';
+
+/**
+ * Participant property key for local recording stats.
+ */
 const PROPERTY_STATS = 'localRecStats';
 
-
+/**
+ * Default recording format.
+ */
 const DEFAULT_RECORDING_FORMAT = 'flac';
 
 

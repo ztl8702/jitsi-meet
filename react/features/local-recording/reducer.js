@@ -1,32 +1,30 @@
 /* @flow */
 
 import { ReducerRegistry } from '../base/redux';
-
 import {
-    LOCAL_RECORDING_OFF,
     CLOCK_TICK,
-    LOCAL_RECORDING_ON,
+    LOCAL_RECORDING_ENGAGED,
+    LOCAL_RECORDING_STATS_UPDATE,
     LOCAL_RECORDING_TOGGLE_DIALOG,
-    LOCAL_RECORDING_STATS_UPDATE
+    LOCAL_RECORDING_UNENGAGED
 } from './actionTypes';
-
-declare var LocalRecording: Object;
+import { recordingController } from './controller';
 
 ReducerRegistry.register('features/local-recording', (state = {}, action) => {
     console.log(state);
     switch (action.type) {
-    case LOCAL_RECORDING_ON: {
+    case LOCAL_RECORDING_ENGAGED: {
         return {
             ...state,
-            on: true,
+            isEngaged: true,
             recordingStartedAt: new Date(Date.now()),
-            encodingFormat: LocalRecording.controller._format
+            encodingFormat: recordingController._format
         };
     }
-    case LOCAL_RECORDING_OFF:
+    case LOCAL_RECORDING_UNENGAGED:
         return {
             ...state,
-            on: false,
+            isEngaged: false,
             recordingStartedAt: null
         };
     case LOCAL_RECORDING_TOGGLE_DIALOG:

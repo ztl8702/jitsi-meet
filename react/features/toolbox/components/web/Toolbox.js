@@ -36,7 +36,7 @@ import {
     getActiveSession
 } from '../../../recording';
 import {
-    toggleDialog as toggleLocalRecording,
+    toggleLocalRecordingInfoDialog,
     LocalRecordingButton
 } from '../../../local-recording';
 import {
@@ -248,8 +248,8 @@ class Toolbox extends Component<Props> {
             = this._onToolbarToggleScreenshare.bind(this);
         this._onToolbarToggleSharedVideo
             = this._onToolbarToggleSharedVideo.bind(this);
-        this._onToolbarToggleLocalRecording
-            = this._onToolbarToggleLocalRecording.bind(this);
+        this._onToolbarToggleLocalRecordingInfoDialog
+            = this._onToolbarToggleLocalRecordingInfoDialog.bind(this);
     }
 
     /**
@@ -388,8 +388,10 @@ class Toolbox extends Component<Props> {
                 <div className = 'button-group-right'>
                     <LocalRecordingButton
                         dispatch = { this.props.dispatch }
-                        isOn = { this.props._localRecState.showDialog }
-                        onClick = { this._onToolbarToggleLocalRecording } />
+                        isDialogShown = { this.props._localRecState.showDialog }
+                        onClick = {
+                            this._onToolbarToggleLocalRecordingInfoDialog
+                        } />
                     { this._shouldShowButton('invite')
                         && !_hideInviteButton
                         && <ToolbarButton
@@ -895,7 +897,7 @@ class Toolbox extends Component<Props> {
         this._doToggleSharedVideo();
     }
 
-    _onToolbarToggleLocalRecording: () => void;
+    _onToolbarToggleLocalRecordingInfoDialog: () => void;
 
     /**
      * Switches local recording on or off.
@@ -903,8 +905,8 @@ class Toolbox extends Component<Props> {
      * @private
      * @returns {void}
      */
-    _onToolbarToggleLocalRecording() {
-        this.props.dispatch(toggleLocalRecording());
+    _onToolbarToggleLocalRecordingInfoDialog() {
+        this.props.dispatch(toggleLocalRecordingInfoDialog());
     }
 
     /**

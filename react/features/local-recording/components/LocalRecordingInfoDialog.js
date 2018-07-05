@@ -191,7 +191,6 @@ class LocalRecordingInfoDialog extends Component<*> {
 
                                 </div>
                             </div>
-
                     }
 
                 </div>

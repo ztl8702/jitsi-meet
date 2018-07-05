@@ -59,7 +59,6 @@ export class FlacAdapter extends RecordingAdapter {
 
                 // Success callback
                 stream => {
-                    // this._mediaRecorder = new MediaRecorder(stream);
                     this._audioContext = new AudioContext();
                     this._audioSource
                      = this._audioContext.createMediaStreamSource(stream);
@@ -112,6 +111,7 @@ export class FlacAdapter extends RecordingAdapter {
      */
     stop() {
         return new Promise(resolve => {
+            this._audioProcessingNode.onaudioprocess = undefined;
             this._audioProcessingNode.disconnect();
             this._audioSource.disconnect();
             this._stopPromiseResolver = resolve;

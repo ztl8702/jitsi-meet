@@ -4,37 +4,57 @@
 
 /* eslint-disable */
 importScripts('/libs/libflac3-1.3.2.min.js');
+/* eslint-enable */
+
+// There is a number of API calls to libflac.js, which does not conform
+// to the camalCase naming convention, but we cannot change it.
+// So we disable the ESLint rule `new-cap` in this file.
+/* eslint-disable new-cap */
+
+// Flow will complain about the number keys in `FLAC_ERRORS,
+// ESLint will complain about the `declare` statement.
+// As the current workaround, add an exception for eslint.
+/* eslint-disable flowtype/no-types-missing-file-annotation*/
 declare var Flac: Object;
 
 const FLAC_ERRORS = {
     // The encoder is in the normal OK state and
     // samples can be processed.
     0: 'FLAC__STREAM_ENCODER_OK',
+
     // The encoder is in the
     // uninitialized state one of the FLAC__stream_encoder_init_*() functions
     // must be called before samples can be processed.
     1: 'FLAC__STREAM_ENCODER_UNINITIALIZED',
+
     // An error occurred in the underlying Ogg layer.
     2: 'FLAC__STREAM_ENCODER_OGG_ERROR',
+
     // An error occurred in the
     // underlying verify stream decoder; check
     // FLAC__stream_encoder_get_verify_decoder_state().
-    3: 'FLAC__STREAM_ENCODER_VERIFY_DECODER_ERROR', 
+    3: 'FLAC__STREAM_ENCODER_VERIFY_DECODER_ERROR',
+
     // The verify decoder detected a mismatch between the
     // original audio signal and the decoded audio signal.
-    4: 'FLAC__STREAM_ENCODER_VERIFY_MISMATCH_IN_AUDIO_DATA', 
+
+    4: 'FLAC__STREAM_ENCODER_VERIFY_MISMATCH_IN_AUDIO_DATA',
+
     // One of the callbacks returned
     // a fatal error.
-    5: 'FLAC__STREAM_ENCODER_CLIENT_ERROR', 
+    5: 'FLAC__STREAM_ENCODER_CLIENT_ERROR',
+
     // An I/O error occurred while
     // opening/reading/writing a file. Check errno.
-    6: 'FLAC__STREAM_ENCODER_IO_ERROR', 
+
+    6: 'FLAC__STREAM_ENCODER_IO_ERROR',
+
     // An error occurred while writing
     // the stream; usually, the write_callback returned an error.
-    7: 'FLAC__STREAM_ENCODER_FRAMING_ERROR', 
-    // Memory allocation
-    // failed.
-    8: 'FLAC__STREAM_ENCODER_MEMORY_ALLOCATION_ERROR' 
+    7: 'FLAC__STREAM_ENCODER_FRAMING_ERROR',
+
+    // Memory allocation failed.
+    8: 'FLAC__STREAM_ENCODER_MEMORY_ALLOCATION_ERROR'
 };
 
 const EncoderState = Object.freeze({
@@ -253,20 +273,21 @@ class Encoder {
         return blob;
     }
 
+    /* eslint-disable no-unused-vars */
     /**
      * Callback function for saving encoded Flac data.
      * This is invoked by libflac.
      *
-     *
      * @private
      * @param {*} buffer - The encoded Flac data.
-     * @param {*} _bytes - Number of bytes in the data.
+     * @param {*} bytes - Number of bytes in the data.
      * @returns {void}
      */
-    _onEncodedData(buffer, _bytes) {
+    _onEncodedData(buffer, bytes) {
         this._flacBuffers.push(buffer);
         this._flacLength += buffer.byteLength;
     }
+    /* eslint-enable no-unused-vars */
 
     /**
      * Callback function for receiving metadata.
