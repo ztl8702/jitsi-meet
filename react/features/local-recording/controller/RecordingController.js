@@ -436,7 +436,7 @@ class RecordingController {
      * @returns {RecordingAdapter}
      */
     _createRecordingAdapter() {
-        logger.trace('[RecordingController] creating recording'
+        logger.debug('[RecordingController] creating recording'
             + ` adapter for ${this._format} format.`);
 
         switch (this._format) {

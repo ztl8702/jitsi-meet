@@ -5,7 +5,8 @@ import {
     MAIN_THREAD_FINISH,
     MAIN_THREAD_INIT,
     MAIN_THREAD_NEW_DATA_ARRIVED,
-    WORKER_BLOB_READY
+    WORKER_BLOB_READY,
+    WORKER_LIBFLAC_READY
 } from './messageTypes';
 
 const logger = require('jitsi-meet-logger').getLogger(__filename);
@@ -32,8 +33,7 @@ export class FlacAdapter extends RecordingAdapter {
             return Promise.resolve();
         }
 
-        return new Promise((resolve, reject) => {
-
+        const promiseInitWorker = new Promise((resolve, reject) => {
             // FIXME: workaround for different file names in development/
             // production environments.
             // We cannot import flacEncodeWorker as a webpack module,
@@ -61,8 +61,11 @@ export class FlacAdapter extends RecordingAdapter {
                         this._stopPromiseResolver();
                         this._stopPromiseResolver = null;
                     }
-                } else if (e.data.cmd === DEBUG) {
+                } else if (e.data.command === DEBUG) {
                     logger.log(e.data);
+                } else if (e.data.command === WORKER_LIBFLAC_READY) {
+                    logger.debug('libflac is ready.');
+                    resolve();
                 } else {
                     logger.error(
                         `Unknown event
@@ -70,6 +73,16 @@ export class FlacAdapter extends RecordingAdapter {
                 }
             };
 
+            this._encoder.postMessage({
+                command: MAIN_THREAD_INIT,
+                config: {
+                    sampleRate: 44100,
+                    bps: 16
+                }
+            });
+        });
+
+        const callbackInitAudioContext = (resolve, reject) => {
             navigator.getUserMedia(
 
                 // constraints - only audio needed for this app
@@ -95,6 +108,7 @@ export class FlacAdapter extends RecordingAdapter {
                             buf: channelLeft
                         });
                     };
+                    logger.debug('AudioContext is set up.');
                     resolve();
                 },
 
@@ -104,8 +118,13 @@ export class FlacAdapter extends RecordingAdapter {
                     reject();
                 }
             );
-        });
+        };
 
+        // FIXME: because Promise constructor immediately executes the executor
+        // function. This is undesirable, we want callbackInitAudioContext to be
+        // executed only **after** promiseInitWorker is resolved.
+        return promiseInitWorker
+            .then(() => new Promise(callbackInitAudioContext));
     }
 
     /**
@@ -114,14 +133,6 @@ export class FlacAdapter extends RecordingAdapter {
      * @inheritdoc
      */
     start() {
-        this._encoder.postMessage({
-            command: MAIN_THREAD_INIT,
-            config: {
-                sampleRate: 44100,
-                bps: 16
-            }
-        });
-
         this._audioSource.connect(this._audioProcessingNode);
         this._audioProcessingNode.connect(this._audioContext.destination);
     }

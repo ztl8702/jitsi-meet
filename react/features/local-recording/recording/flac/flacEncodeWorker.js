@@ -2,7 +2,8 @@ import {
     MAIN_THREAD_FINISH,
     MAIN_THREAD_INIT,
     MAIN_THREAD_NEW_DATA_ARRIVED,
-    WORKER_BLOB_READY
+    WORKER_BLOB_READY,
+    WORKER_LIBFLAC_READY
 } from './messageTypes';
 
 /**
@@ -252,7 +253,7 @@ class Encoder {
             bufferI32.length
         );
 
-        if (status !== true) {
+        if (status !== 1) {
             // get error
 
             const errorNo
@@ -360,10 +361,16 @@ self.onmessage = function(e) {
 
         if (Flac.isReady()) {
             encoder = new Encoder(sampleRate, bps);
+            self.postMessage({
+                command: WORKER_LIBFLAC_READY
+            });
         } else {
             Flac.onready = function() {
                 setTimeout(() => {
                     encoder = new Encoder(sampleRate, bps);
+                    self.postMessage({
+                        command: WORKER_LIBFLAC_READY
+                    });
                 }, 0);
             };
         }
