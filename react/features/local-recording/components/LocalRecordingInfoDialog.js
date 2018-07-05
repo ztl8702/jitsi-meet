@@ -175,7 +175,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                     <div className = 'info-dialog-title'>
                         { t('localRecording.localRecording') }
                     </div>
-                    <div className = 'info-dialog-conference-url'>
+                    <div>
                         <span className = 'info-label'>
                             {`${t('localRecording.moderator')}:`}
                         </span>
@@ -186,7 +186,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                                 : t('localRecording.no') }
                         </span>
                     </div>
-                    { isOn && <div className = 'info-dialog-conference-url'>
+                    { isOn && <div>
                         <span className = 'info-label'>
                             {`${t('localRecording.duration')}:`}
                         </span>
@@ -197,7 +197,7 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                     </div>
                     }
                     {isOn
-                    && <div className = 'info-dialog-conference-url'>
+                    && <div>
                         <span className = 'info-label'>
                             {`${t('localRecording.encoding')}:`}
                         </span>
@@ -209,7 +209,14 @@ class LocalRecordingInfoDialog extends Component<Props, State> {
                     }
                     {
                         isModerator
-                            && this.renderStats()
+                        && <div>
+                            <div>
+                                <span className = 'info-label'>
+                                    {`${t('localRecording.participantStats')}:`}
+                                </span>
+                            </div>
+                            { this.renderStats() }
+                        </div>
                     }
                     {
                         isModerator

@@ -653,6 +653,7 @@
         "localUser": "Local user",
         "duration": "Duration",
         "encoding": "Encoding",
+        "participantStats": "Participant Stats",
         "clientState": {
             "on": "On",
             "off": "Off",
