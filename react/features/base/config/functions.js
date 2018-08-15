@@ -77,6 +77,7 @@ const WHITELISTED_KEYS = [
     'debug',
     'debugAudioLevels',
     'defaultLanguage',
+    'deploymentInfo',
     'desktopSharingChromeDisabled',
     'desktopSharingChromeExtId',
     'desktopSharingChromeMinExtVersion',
